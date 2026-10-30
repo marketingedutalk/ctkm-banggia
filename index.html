@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Công cụ tính giá KM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/ui/styles.css">
+  <style>
+    /* Khung giả lập portal Edutalk — khi nhúng vào portal thật thì bỏ phần .demo-* này */
+    body { margin: 0; font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif; background: #4b2a9b; }
+    .demo-top { height: 72px; display: flex; align-items: center; gap: 28px; padding: 0 28px; color: #fff;
+      background: linear-gradient(90deg, #120c2c, #2a1a5c 45%, #3a2470); }
+    .demo-logo { font-size: 26px; font-weight: 600; letter-spacing: -.02em; display: flex; align-items: center; gap: 4px; }
+    .demo-logo i { display: inline-grid; grid-template-columns: 9px 9px; gap: 2px; margin-left: 2px; }
+    .demo-logo i b { width: 9px; height: 9px; border-radius: 3px; background: #f7b733; }
+    .demo-logo i b:nth-child(2) { background: #fff; }
+    .demo-crumb { border-left: 1px solid rgba(255,255,255,.15); padding-left: 28px; height: 100%; display: flex; align-items: center; font-size: 14px; opacity: .9; }
+    .demo-crumb b { font-weight: 600; margin-left: 6px; }
+    .demo-avatar { margin-left: auto; width: 34px; height: 34px; border-radius: 50%; background: #fff; color: #4b2a9b; display: grid; place-items: center; font-weight: 700; }
+    @media (max-width: 760px) { .demo-crumb { display: none; } }
+  </style>
+</head>
+<body>
+  <header class="demo-top">
+    <div class="demo-logo">edutalk<i><b></b><b></b><b></b><b></b></i></div>
+    <div class="demo-crumb">Hành chính › <b>Công cụ tính giá KM</b></div>
+    <div class="demo-avatar">A</div>
+  </header>
+  <main id="promo-tool"></main>
+
+  <script type="module">
+    import seed from './src/data/seed.js';
+    import { localStore } from './src/store.js';
+    import { mountPromoTool } from './src/ui/app.js';
+
+    // Bản demo: lưu dữ liệu trong trình duyệt + cho phép đổi vai trò để xem thử.
+    // Trên portal thật: role lấy từ tài khoản đăng nhập, store = supabaseStore(...) hoặc restStore(...) — xem README.
+    mountPromoTool(document.getElementById('promo-tool'), {
+      role: new URLSearchParams(location.search).get('role') ?? 'sale',
+      store: localStore(seed),
+      allowRoleSwitch: true,
+    });
+  </script>
+</body>
+</html>
