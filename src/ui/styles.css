@@ -30,7 +30,7 @@
 }
 .pt-root *, .pt-root *::before, .pt-root *::after { box-sizing: border-box; }
 /* :where() để không đè màu của .pt-tab / .pt-btn--primary */
-.pt-root :where(button, input, select) { font: inherit; color: inherit; }
+.pt-root :where(button, input, select, textarea) { font: inherit; color: inherit; }
 .pt-root :where(svg) { flex: none; }
 
 /* ---------- Thanh tab tím (giống menu Hành chính / Thông tin / Học tập) ---------- */
@@ -277,3 +277,5 @@
 
 .pt-savebar[hidden] { display: none; }
 .pt-table--edit .pt-select { min-width: 140px; }
+
+@media (max-width: 1100px) { #pt-pdf-grid { grid-template-columns: minmax(0, 1fr) !important; } }

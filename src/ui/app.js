@@ -7,6 +7,7 @@ import {
 import { icon } from './icons.js';
 import { tableDefs, formatCell, parseCell } from './admin-tables.js';
 import { importWorkbook } from './excel-import.js';
+import { buildPromoDoc, defaultTitle, outputsFor, SECTIONS } from '../doc/promo-doc.js';
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -23,10 +24,12 @@ export async function mountPromoTool(root, opts = {}) {
     data: normalizeData(await store.load()),
     calc: null,
     table: null,
+    pdf: null,
     admin: { tab: 'courses', label: '', q: '', draft: null, dirty: false, issues: [] },
   };
   S.calc = defaultCalc(S.data);
   S.table = { ...defaultCalc(S.data), output: '' };
+  S.pdf = { ...defaultCalc(S.data), title: '', sections: SECTIONS.map((x) => x.id), outputs: [] };
 
   root.classList.add('pt-root');
   root.innerHTML = '';
@@ -40,6 +43,7 @@ export async function mountPromoTool(root, opts = {}) {
     const tabs = [
       ['calc', 'calc', 'Tính giá'],
       ['table', 'table', 'Bảng giá lộ trình'],
+      ['pdf', 'download', 'Xuất PDF'],
       ...(S.role === 'admin' ? [['admin', 'db', 'Quản trị dữ liệu gốc']] : []),
     ];
     if (S.view === 'admin' && S.role !== 'admin') S.view = 'calc';
@@ -55,9 +59,10 @@ export async function mountPromoTool(root, opts = {}) {
             <button class="${S.role === 'admin' ? 'is-active' : ''}" data-act="role" data-v="admin">Admin</button></div>`
         : '');
     body.innerHTML = `<div class="pt-container">${
-      S.view === 'calc' ? viewCalc() : S.view === 'table' ? viewTable() : viewAdmin()
+      S.view === 'calc' ? viewCalc() : S.view === 'table' ? viewTable() : S.view === 'pdf' ? viewPdf() : viewAdmin()
     }</div>`;
     if (S.view === 'admin') renderAdminTable();
+    if (S.view === 'pdf') loadPdfPreview();
   }
 
   // ---------------------------------------------------------------- Tính giá (sale)
@@ -375,6 +380,92 @@ export async function mountPromoTool(root, opts = {}) {
     );
   }
 
+  // ---------------------------------------------------------------- Xuất PDF (ấn phẩm in / gửi nhà trường)
+  let pdfDoc = null;
+
+  function viewPdf() {
+    const d = S.data;
+    const p = S.pdf;
+    const prog = findProgram(d, p.program);
+    pdfDoc = buildPromoDoc(d, p);
+    const sel = (f, options, cur, fmt = (o) => o, allLabel = null) =>
+      `<select class="pt-select" data-act="pdf" data-f="${f}">${allLabel != null ? `<option value="">${allLabel}</option>` : ''}${options
+        .map((o) => `<option value="${esc(o)}" ${eq(o, cur) ? 'selected' : ''}>${esc(fmt(o))}</option>`)
+        .join('')}</select>`;
+    const check = (act, v, on, text) =>
+      `<label style="display:flex;gap:8px;align-items:center;cursor:pointer;font-size:13px">
+        <input type="checkbox" data-act="${act}" value="${esc(v)}" ${on ? 'checked' : ''} style="width:16px;height:16px;accent-color:var(--pt-purple)">${text}</label>`;
+    const outputs = outputsFor(d, p.label);
+    const periodic = prog?.type === 'DINH_KY';
+
+    const options = `<div class="pt-section" style="margin-top:0">
+      <div class="pt-section-head"><div class="pt-section-icon">${icon('settings', 16)}</div>
+        <div><div class="pt-section-title">Tùy chọn ấn phẩm</div><div class="pt-section-sub">Khung theo nhận diện nhãn · số liệu lấy từ dữ liệu gốc</div></div></div>
+      <div class="pt-section-body"><div class="pt-form" style="gap:12px">
+        <div class="pt-field"><label>Nhãn</label>${sel('label', d.settings.labels.map((l) => l.name), p.label)}</div>
+        <div class="pt-field"><label>Chương trình khuyến mại</label>${sel('program', d.settings.programs.map((x) => x.name), p.program)}</div>
+        ${prog?.type === 'LKT'
+          ? `<div class="pt-field"><label>Nhóm LKT</label>${sel('lktGroup', lktGroupsFor(d, p.label).map((g) => g.name), p.lktGroup)}</div>
+             <div class="pt-field"><label>Format LKT (cho bảng giá)</label>${sel('lktFormat', lktFormatsFor(d, p.label, p.lktGroup).map((r) => r.format), p.lktFormat)}</div>`
+          : ''}
+        ${periodic
+          ? ''
+          : `<div class="pt-field"><label>Hình thức thanh toán tính bảng giá</label>${sel('method', d.settings.paymentMethods.map((m) => m.name), p.method)}</div>
+             <div class="pt-field"><label>Kỳ hạn</label>${sel('term', termsFor(d, p.method).map(String), String(p.term), (x) => (Number(x) ? `${x} tháng` : 'Không kỳ hạn'))}</div>`}
+        <div class="pt-field"><label>Tên chương trình (tiêu đề)</label>
+          <input class="pt-input" data-act="pdf-title" value="${esc(p.title)}" placeholder="${esc(defaultTitle(d, p.label))}"></div>
+        <div class="pt-field"><label>Nội dung xuất</label><div style="display:grid;gap:7px">${SECTIONS.map((x) =>
+          check('pdf-sec', x.id, p.sections.includes(x.id), esc(x.title))).join('')}</div></div>
+        ${p.sections.includes('routes') && outputs.length > 1
+          ? `<div class="pt-field"><label>Đầu ra trong bảng giá lộ trình</label><div class="pt-chips">${outputs
+              .map((o) => check('pdf-out', o, !p.outputs.length || p.outputs.includes(o), esc(o))).join('')}</div></div>`
+          : ''}
+      </div></div></div>`;
+
+    return (
+      head({
+        ic: 'download',
+        title: 'Xuất ấn phẩm chương trình khuyến mại',
+        sub: 'Dùng để in ấn, gửi nhà trường. Bấm “Xuất PDF” rồi chọn Lưu dưới dạng PDF (Save as PDF).',
+        actions: `<button class="pt-btn pt-btn--primary" data-act="pdf-print" ${pdfDoc.pages ? '' : 'disabled'}>${icon('download', 16)}Xuất PDF</button>`,
+      }) +
+      `<div class="pt-grid" style="grid-template-columns:320px minmax(0,1fr);margin-top:14px;align-items:start" id="pt-pdf-grid">
+        ${options}
+        <div class="pt-section" style="margin-top:0">
+          <div class="pt-section-head"><div class="pt-section-icon">${icon('eye', 16)}</div>
+            <div><div class="pt-section-title">Xem trước</div><div class="pt-section-sub">${pdfDoc.pages} trang khổ A4 · ${esc(pdfDoc.title)}</div></div></div>
+          ${pdfDoc.pages
+            ? '<iframe id="pt-pdf-frame" title="Xem trước ấn phẩm" style="width:100%;height:78vh;border:0;border-radius:0 0 14px 14px;background:#8a8a8a;display:block"></iframe>'
+            : '<div class="pt-empty">Chưa chọn nội dung nào hoặc chương trình chưa có dữ liệu</div>'}
+        </div>
+      </div>`
+    );
+  }
+
+  function loadPdfPreview() {
+    const frame = body.querySelector('#pt-pdf-frame');
+    if (!frame || !pdfDoc) return;
+    frame.addEventListener('load', () => {
+      const doc = frame.contentDocument;
+      // Thu nhỏ để trang ngang A4 (1123px) vừa khung xem trước; khi in vẫn đúng 100%
+      const z = Math.min(1, (frame.clientWidth - 28) / 1123);
+      const st = doc.createElement('style');
+      st.textContent = `@media screen { body { zoom: ${z}; padding: 14px 0; } }`;
+      doc.head.appendChild(st);
+    }, { once: true });
+    frame.srcdoc = pdfDoc.html;
+  }
+
+  async function printPdf() {
+    const frame = body.querySelector('#pt-pdf-frame');
+    if (!frame?.contentWindow) return;
+    try {
+      await frame.contentDocument.fonts?.ready;
+    } catch {}
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+  }
+
   // ---------------------------------------------------------------- Quản trị (admin)
   const draft = () => (S.admin.draft ??= clone(S.data));
   const getRows = (def) => def.path.reduce((o, k) => o[k], draft());
@@ -465,6 +556,15 @@ export async function mountPromoTool(root, opts = {}) {
         ${f('campaignName', 'Tên đợt khuyến mại')}${f('validFrom', 'Áp dụng từ ngày', 'date')}${f('validTo', 'Đến ngày', 'date')}
       </div><div class="pt-field" style="margin-top:14px"><label>Lưu ý hiển thị cho sale</label>
         <input class="pt-input" value="${esc(s.note)}" data-act="setting" data-k="note"></div>
+      <div class="pt-section-title" style="margin-top:22px">Câu chữ trên ấn phẩm PDF</div>
+      ${[
+        ['cashbackLabel', 'Tiêu đề cột hoàn tiền (CTKM định kỳ)'],
+        ['warrantyDuration', 'Thời lượng gói bảo hành'],
+        ['warrantyForm', 'Hình thức gói bảo hành'],
+        ['routeNote', 'Lưu ý dưới bảng giá lộ trình'],
+        ['citimeNote', 'Lưu ý phụ lục Citime'],
+      ].map(([k, l]) => `<div class="pt-field" style="margin-top:12px"><label>${l}</label>
+        <textarea class="pt-input" rows="2" style="height:auto;padding:8px 12px;resize:vertical" data-act="doc-text" data-k="${k}">${esc(s.docTexts?.[k])}</textarea></div>`).join('')}
       <div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">
         <button class="pt-btn pt-btn--ghost pt-btn--sm" data-act="reset-seed">${icon('refresh', 15)}Khôi phục dữ liệu gốc từ file Excel ban đầu</button>
       </div></div></div>`;
@@ -493,6 +593,11 @@ export async function mountPromoTool(root, opts = {}) {
         const opts = col.options.includes(v) || v === '' ? col.options : [v, ...col.options];
         return `<select class="pt-select" ${attrs}>${opts.map((o) => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
       }
+      if (col.type === 'color')
+        return `<input type="color" value="${esc(v || '#000000')}" ${attrs} style="width:44px;height:30px;border:0;background:none;cursor:pointer">`;
+      if (col.type === 'multiline')
+        return `<textarea class="pt-input w-wide" rows="${Math.max(2, Math.min(4, String(v ?? '').split('\n').length))}" ${attrs}
+          style="height:auto;padding:6px 8px;resize:vertical;line-height:1.4">${esc(v)}</textarea>`;
       const numeric = ['money', 'pct', 'int'].includes(col.type);
       return `<input class="pt-input ${numeric ? 'num' : ''} ${col.wide ? 'w-wide' : ''}" ${numeric ? 'inputmode="decimal"' : ''} value="${esc(formatCell(col, v))}" ${attrs}>`;
     };
@@ -574,6 +679,9 @@ export async function mountPromoTool(root, opts = {}) {
     const act = el.dataset.act;
     const A = S.admin;
     switch (act) {
+      case 'pdf-print':
+        await printPdf();
+        return;
       case 'view':
         S.view = el.dataset.v;
         break;
@@ -605,6 +713,7 @@ export async function mountPromoTool(root, opts = {}) {
         return;
       case 'tbl-reset':
         S.table = { ...defaultCalc(S.data), output: '' };
+  S.pdf = { ...defaultCalc(S.data), title: '', sections: SECTIONS.map((x) => x.id), outputs: [] };
         break;
       case 'open-route': {
         const t = S.table;
@@ -684,6 +793,27 @@ export async function mountPromoTool(root, opts = {}) {
         draft().settings[el.dataset.k] = el.value;
         markDirty();
         return;
+      case 'doc-text':
+        (draft().settings.docTexts ??= {})[el.dataset.k] = el.value;
+        markDirty();
+        return;
+      case 'pdf':
+        setCalc(S.pdf, el.dataset.f, el.value);
+        if (el.dataset.f === 'label') S.pdf.outputs = [];
+        break;
+      case 'pdf-title':
+        S.pdf.title = el.value.trim();
+        break;
+      case 'pdf-sec':
+      case 'pdf-out': {
+        const key = el.dataset.act === 'pdf-sec' ? 'sections' : 'outputs';
+        const all = key === 'sections' ? SECTIONS.map((x) => x.id) : outputsFor(S.data, S.pdf.label);
+        const cur = new Set(S.pdf[key].length || key === 'sections' ? S.pdf[key] : all);
+        if (el.checked) cur.add(el.value);
+        else cur.delete(el.value);
+        S.pdf[key] = all.filter((x) => cur.has(x));
+        break;
+      }
       case 'tbl':
         setCalc(S.table, el.dataset.f, el.value);
         if (el.dataset.f === 'label') S.table.output = '';

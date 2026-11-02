@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/engine.test.mjs",
+    "test": "node tests/engine.test.mjs && node tests/doc.test.mjs",
     "dev": "node scripts/serve.mjs"
   }
 }

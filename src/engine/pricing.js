@@ -1,6 +1,8 @@
 // Engine tính giá khuyến mại — chuyển 1:1 từ sheet 12_CALCULATOR_SALE.
 // Thuần JavaScript, không phụ thuộc framework: dùng được trong Vue/React/Node (cả server để chống sửa giá).
 
+import { COURSE_DOC_INFO, DOC_SETTINGS, METHOD_DOC_LABELS } from '../data/doc-defaults.js';
+
 const norm = (s) => String(s ?? '').trim().toLowerCase();
 // Excel MATCH/COUNTIF không phân biệt hoa thường ("Vũ Đài Trí Tuệ" = "Vũ đài trí tuệ")
 const eq = (a, b) => norm(a) === norm(b);
@@ -69,6 +71,18 @@ export function normalizeData(data) {
     s.lktGroups = [{ name: 'LKT Toàn hệ thống', baseProgram: 'Định kỳ đặc biệt' }];
   data.lkt.forEach((r) => {
     if (!r.group) r.group = s.lktGroups[0].name;
+  });
+  // Thông tin cho ấn phẩm PDF (bổ sung 02/11/2026)
+  data.courses.forEach((c) => {
+    const info = COURSE_DOC_INFO[`${c.label}|${c.code}|${c.mode}`];
+    if (c.sessions == null) c.sessions = info?.sessions ?? '';
+    if (c.classSize == null) c.classSize = info?.classSize ?? '';
+  });
+  for (const [k, v] of Object.entries(DOC_SETTINGS)) if (s[k] == null) s[k] = JSON.parse(JSON.stringify(v));
+  for (const [k, v] of Object.entries(DOC_SETTINGS.docTexts)) if (s.docTexts[k] == null) s.docTexts[k] = v;
+  s.paymentMethods.forEach((m) => {
+    const d = METHOD_DOC_LABELS[m.name] ?? { docLabel: m.name, docShort: m.name, giftCondition: '' };
+    for (const k of ['docLabel', 'docShort', 'giftCondition']) if (m[k] == null) m[k] = d[k];
   });
   return data;
 }

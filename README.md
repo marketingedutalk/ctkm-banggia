@@ -74,6 +74,22 @@ useEffect(() => {
 
 Giao diện dùng font của portal (`font-family: inherit`), màu tím `#4b2a9b` theo menu Hành chính. Đổi màu ở biến `--pt-*` đầu `styles.css`.
 
+## Xuất ấn phẩm PDF (in ấn / gửi nhà trường)
+
+Tab **Xuất PDF** (sale và admin đều dùng được): chọn nhãn, chương trình (và Nhóm/Format LKT hoặc HTTT tham chiếu với chương trình không phải Định kỳ), tick nội dung cần in, xem trước, rồi bấm **Xuất PDF** → chọn *Lưu dưới dạng PDF*.
+
+- Khung theo nhận diện nhãn (*Quản trị → Ấn phẩm PDF → Nhận diện nhãn*): IELTS Mentor nền vàng, chữ đen, giá sau ưu đãi màu đỏ. Có thể đổi màu, gắn link logo, sửa chân trang.
+- Tiêu đề mặc định: `CHƯƠNG TRÌNH KHUYẾN MÃI [NHÃN] - THÁNG [m/yyyy]`, lấy theo ngày bắt đầu ở *Thông tin chương trình*. Sửa được ngay trước khi xuất.
+- Cấu trúc trang cố định như ấn phẩm tháng 11/2026. Mọi con số được tính lại từ dữ liệu gốc:
+  1. Bảng giá khóa học + Gói bảo hành + Dịch vụ học tập (A4 dọc)
+  2. Chương trình khuyến mại + Quà tặng khóa học đặc biệt (voucher)
+  3. Quà tặng theo hình thức thanh toán + Bộ quà tặng
+  4. Bảng giá lộ trình gợi ý, mỗi đầu ra một trang (A4 ngang)
+  5. Phụ lục thời hạn trả góp Citime (A4 ngang)
+- Phần chỉ dùng cho ấn phẩm, admin nhập ở *Quản trị*: thời lượng và sĩ số (bảng Khóa học), Bộ quà tặng, Dịch vụ học tập, nhãn cột của từng HTTT, câu chữ lưu ý.
+- Trang nào có nhiều dòng hơn khổ giấy sẽ tự thu nhỏ cho vừa một trang.
+- `npm test` đối chiếu ấn phẩm với bản IELTS Mentor tháng 11/2026 (giá từng khóa, 3 bảng đầu ra, quà, voucher).
+
 ## Cập nhật dữ liệu hằng tháng
 
 - **Sửa trên web:** Admin → chọn bảng → sửa ô → *Lưu & áp dụng*. Có cảnh báo khi trùng khóa, giá ≤ 0, % ngoài 0–100.

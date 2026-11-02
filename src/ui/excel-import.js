@@ -32,9 +32,15 @@ export async function importWorkbook(file, current) {
   };
 
   const next = JSON.parse(JSON.stringify(current));
-  next.courses = rows('01_DM_KHOA_HOC', 6).map((r) => ({
-    label: str(r[0]), code: str(r[1]), name: str(r[2]), mode: str(r[3]), price: num(r[4]), voucher: num(r[5]),
-  }));
+  // Thời lượng / sĩ số (chỉ dùng cho PDF) không có trong Excel → giữ giá trị admin đã nhập
+  const docInfo = new Map((current.courses ?? []).map((c) => [`${c.label}|${c.code}|${c.mode}`.toLowerCase(), c]));
+  next.courses = rows('01_DM_KHOA_HOC', 6).map((r) => {
+    const old = docInfo.get(`${str(r[0])}|${str(r[1])}|${str(r[3])}`.toLowerCase());
+    return {
+      label: str(r[0]), code: str(r[1]), name: str(r[2]), mode: str(r[3]), price: num(r[4]), voucher: num(r[5]),
+      sessions: old?.sessions ?? '', classSize: old?.classSize ?? '',
+    };
+  });
   next.programVouchers = rows('01B_VOUCHER_CTKM', 5).map((r) => ({
     label: str(r[0]), program: str(r[1]), code: str(r[2]), mode: str(r[3]), voucher: num(r[4]),
   }));

@@ -28,8 +28,10 @@ export function tableDefs(d) {
         { key: 'mode', label: 'Hình thức', type: 'select', options: MODES },
         { key: 'price', label: 'Giá gốc', type: 'money' },
         { key: 'voucher', label: 'Voucher đặc biệt', type: 'money' },
+        { key: 'sessions', label: 'Thời lượng (PDF)', type: 'text' },
+        { key: 'classSize', label: 'Sĩ số (PDF)', type: 'text' },
       ],
-      blank: (label) => ({ label, code: codes[0], name: '', mode: 'Online', price: 0, voucher: 0 }),
+      blank: (label) => ({ label, code: codes[0], name: '', mode: 'Online', price: 0, voucher: 0, sessions: '', classSize: '' }),
     },
     {
       id: 'warranty', group: 'Danh mục', icon: 'shield', sheet: '02_DM_BAO_HANH', title: 'Gói bảo hành', path: ['warranty'],
@@ -182,8 +184,11 @@ export function tableDefs(d) {
         { key: 'giftGroup', label: 'Nhóm quà', type: 'text' },
         { key: 'citime', label: 'Citime', type: 'bool' },
         { key: 'allowSingle', label: 'Cho khóa lẻ', type: 'bool' },
+        { key: 'docLabel', label: 'Cột bảng quà (PDF)', type: 'text' },
+        { key: 'docShort', label: 'Cột bảng lộ trình (PDF)', type: 'multiline' },
+        { key: 'giftCondition', label: 'Điều kiện nhận quà (PDF)', type: 'text', wide: true },
       ],
-      blank: () => ({ name: '', terms: [0], giftGroup: '', citime: false, allowSingle: false }),
+      blank: () => ({ name: '', terms: [0], giftGroup: '', citime: false, allowSingle: false, docLabel: '', docShort: '', giftCondition: '' }),
     },
     {
       id: 'labels', group: 'Cấu hình', icon: 'tag', title: 'Nhãn & giới hạn', path: ['settings', 'labels'],
@@ -204,6 +209,47 @@ export function tableDefs(d) {
         { key: 'warranty', label: 'Tính BH', type: 'bool' },
       ],
       blank: () => ({ order: 99, code: '', short: '', warranty: true }),
+    },
+
+    // ---- Ấn phẩm PDF ----
+    {
+      id: 'brands', group: 'Ấn phẩm PDF', icon: 'sparkle', title: 'Nhận diện nhãn', path: ['settings', 'brands'],
+      desc: 'Khung ấn phẩm theo từng nhãn: màu nền (2 sắc độ tạo hiệu ứng tia sáng), màu chữ, màu giá sau ưu đãi, logo (link ảnh, để trống thì in tên nhãn) và dòng chân trang.',
+      columns: [
+        { key: 'label', label: 'Nhãn', type: 'select', options: labels },
+        { key: 'brandName', label: 'Tên hiển thị', type: 'text' },
+        { key: 'bg', label: 'Nền', type: 'color' },
+        { key: 'bg2', label: 'Nền sáng', type: 'color' },
+        { key: 'ink', label: 'Chữ', type: 'color' },
+        { key: 'accent', label: 'Giá nổi bật', type: 'color' },
+        { key: 'logoUrl', label: 'Link logo', type: 'text' },
+        { key: 'footer', label: 'Chân trang', type: 'multiline', wide: true },
+      ],
+      blank: (label) => ({ label, brandName: String(label).toUpperCase(), bg: '#FFD21F', bg2: '#FFE45C', ink: '#111111', accent: '#E3141B', logoUrl: '', footer: '' }),
+    },
+    {
+      id: 'giftSets', group: 'Ấn phẩm PDF', icon: 'gift', title: 'Bộ quà tặng', path: ['settings', 'giftSets'],
+      desc: 'Bảng "Bộ quà tặng giá trị dành cho học viên". Giá trị nên khớp với cột Giá trị ở bảng Quà tặng. Mỗi món một dòng.',
+      byLabel: true,
+      columns: [
+        { key: 'label', label: 'Nhãn', type: 'select', options: labels },
+        { key: 'value', label: 'Giá trị bộ quà', type: 'money' },
+        { key: 'items', label: 'Quà tặng bao gồm', type: 'multiline', wide: true },
+      ],
+      blank: (label) => ({ label, value: 0, items: '' }),
+    },
+    {
+      id: 'services', group: 'Ấn phẩm PDF', icon: 'school', title: 'Dịch vụ học tập', path: ['settings', 'services'],
+      desc: 'Bảng "Dịch vụ học tập" ở trang giá khóa học.',
+      byLabel: true,
+      columns: [
+        { key: 'label', label: 'Nhãn', type: 'select', options: labels },
+        { key: 'name', label: 'Sản phẩm', type: 'text', wide: true },
+        { key: 'duration', label: 'Thời lượng', type: 'text' },
+        { key: 'mode', label: 'Hình thức', type: 'text' },
+        { key: 'price', label: 'Giá gốc', type: 'money' },
+      ],
+      blank: (label) => ({ label, name: '', duration: '1 buổi', mode: 'Online', price: 0 }),
     },
   ];
 }
