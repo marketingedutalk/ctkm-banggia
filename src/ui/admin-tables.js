@@ -214,18 +214,18 @@ export function tableDefs(d) {
     // ---- Ấn phẩm PDF ----
     {
       id: 'brands', group: 'Ấn phẩm PDF', icon: 'sparkle', title: 'Nhận diện nhãn', path: ['settings', 'brands'],
-      desc: 'Khung ấn phẩm theo từng nhãn: màu nền (2 sắc độ tạo hiệu ứng tia sáng), màu chữ, màu giá sau ưu đãi, logo (link ảnh, để trống thì in tên nhãn) và dòng chân trang.',
+      desc: 'Ấn phẩm PDF theo phong cách catalogue của nhãn: màu chủ đạo (sọc, thẻ, cột giá), màu nền giấy, màu tối (bìa, tiêu đề bảng), màu cảnh báo, logo (link ảnh, để trống thì in tên nhãn) và dòng chân trang.',
       columns: [
         { key: 'label', label: 'Nhãn', type: 'select', options: labels },
         { key: 'brandName', label: 'Tên hiển thị', type: 'text' },
-        { key: 'bg', label: 'Nền', type: 'color' },
-        { key: 'bg2', label: 'Nền sáng', type: 'color' },
-        { key: 'ink', label: 'Chữ', type: 'color' },
-        { key: 'accent', label: 'Giá nổi bật', type: 'color' },
+        { key: 'bg', label: 'Màu chủ đạo', type: 'color' },
+        { key: 'bg2', label: 'Nền giấy', type: 'color' },
+        { key: 'ink', label: 'Màu tối', type: 'color' },
+        { key: 'accent', label: 'Cảnh báo', type: 'color' },
         { key: 'logoUrl', label: 'Link logo', type: 'text' },
         { key: 'footer', label: 'Chân trang', type: 'multiline', wide: true },
       ],
-      blank: (label) => ({ label, brandName: String(label).toUpperCase(), bg: '#FFD21F', bg2: '#FFE45C', ink: '#111111', accent: '#E3141B', logoUrl: '', footer: '' }),
+      blank: (label) => ({ label, brandName: String(label).toUpperCase(), bg: '#F0C030', bg2: '#FFFCF2', ink: '#161513', accent: '#C8102E', logoUrl: '', footer: '' }),
     },
     {
       id: 'giftSets', group: 'Ấn phẩm PDF', icon: 'gift', title: 'Bộ quà tặng', path: ['settings', 'giftSets'],

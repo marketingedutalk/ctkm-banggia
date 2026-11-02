@@ -1,4 +1,4 @@
-// Đối chiếu ấn phẩm PDF với ấn phẩm IELTS Mentor tháng 11/2026 (ảnh mẫu). Chạy: node tests/doc.test.mjs
+// Đối chiếu số liệu ấn phẩm PDF với ấn phẩm IELTS Mentor tháng 11/2026 (cùng bộ dữ liệu gốc). Chạy: node tests/doc.test.mjs
 import seed from '../src/data/seed.js';
 import { normalizeData } from '../src/engine/pricing.js';
 import { buildPromoDoc } from '../src/doc/promo-doc.js';
@@ -12,9 +12,9 @@ const expect = {
   'Đầu ra 5.5+': ['19.700.000', '20.645.000', '21.275.000', '22.220.000', '27.710.000', '33.336.000', '36.900.000', '38.080.000', '39.260.000', '44.020.000'],
   'Đầu ra 6.5+': ['24.280.000', '19.140.000', '31.430.000', '30.020.000', '38.182.000', '38.030.000', '41.420.000', '43.396.000', '46.700.000', '42.560.000', '49.060.000', '55.140.000'],
   'Đầu ra 7.0+': ['30.360.000', '41.050.000', '54.236.000', '57.350.000', '59.710.000', '66.550.000'],
-  'CTKM + voucher': ['Hoàn tiền 800.000đ', 'Hoàn tiền 2.500.000đ', 'Voucher giảm học phí 6.000.000đ', 'Voucher giảm học phí 1.300.000đ'],
+  'CTKM + voucher': ['Hoàn tiền 800.000đ', 'Hoàn tiền 2.500.000đ', '6.000.000đ', '1.300.000đ'],
   'Quà tặng': ['Bộ quà tặng trị giá 6.770.000đ', '100% phí lãi suất trả góp', 'Hoàn thành tối thiểu 40% học phí trong tháng', 'Bình nước IELTS MENTOR'],
-  'Tiêu đề': ['CHƯƠNG TRÌNH KHUYẾN MÃI IELTS MENTOR - THÁNG 10/2026', 'Từ 1/10/2026 - 31/10/2026', 'PHỤ LỤC DANH SÁCH THỜI HẠN TRẢ GÓP CITIME'],
+  'Tiêu đề': ['CHƯƠNG TRÌNH KHUYẾN MÃI IELTS MENTOR - THÁNG 10/2026', 'Áp dụng từ 1/10/2026 đến 31/10/2026', 'Thời hạn trả góp Citime tối đa', 'mức giảm học phí cao nhất', '30%'],
 };
 let bad = 0;
 for (const [name, list] of Object.entries(expect)) {

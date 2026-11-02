@@ -22,18 +22,18 @@ export const COURSE_DOC_INFO = {
 };
 
 export const DOC_SETTINGS = {
-  // Nhận diện theo nhãn: màu nền, màu chữ/khung, màu nhấn (giá sau ưu đãi), dòng chân trang
+  // Nhận diện theo nhãn (phong cách catalogue): màu chủ đạo, nền giấy, màu tối, màu cảnh báo, dòng chân trang
   brands: [
     {
-      label: 'IELTS Mentor', brandName: 'IELTS MENTOR', bg: '#FFD21F', bg2: '#FFE45C', ink: '#111111', accent: '#E3141B',
+      label: 'IELTS Mentor', brandName: 'IELTS Mentor', bg: '#F0C030', bg2: '#FFFCF2', ink: '#161513', accent: '#C8102E',
       logoUrl: '', footer: 'Áp dụng cho toàn bộ khách hàng\nÁp dụng toàn bộ hệ thống IELTS MENTOR',
     },
     {
-      label: 'CLASSUP 1-8', brandName: 'CLASSUP', bg: '#4B2A9B', bg2: '#6A45C9', ink: '#1F1646', accent: '#E3141B',
+      label: 'CLASSUP 1-8', brandName: 'CLASSUP', bg: '#4B2A9B', bg2: '#FBFAFF', ink: '#1F1646', accent: '#C8102E',
       logoUrl: '', footer: 'Áp dụng cho toàn bộ khách hàng\nÁp dụng toàn bộ hệ thống CLASSUP',
     },
     {
-      label: 'CLASSUP 1-1', brandName: 'CLASSUP', bg: '#4B2A9B', bg2: '#6A45C9', ink: '#1F1646', accent: '#E3141B',
+      label: 'CLASSUP 1-1', brandName: 'CLASSUP', bg: '#4B2A9B', bg2: '#FBFAFF', ink: '#1F1646', accent: '#C8102E',
       logoUrl: '', footer: 'Áp dụng cho toàn bộ khách hàng\nÁp dụng toàn bộ hệ thống CLASSUP',
     },
   ],

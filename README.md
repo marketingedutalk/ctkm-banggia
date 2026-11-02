@@ -78,17 +78,11 @@ Giao diện dùng font của portal (`font-family: inherit`), màu tím `#4b2a9b
 
 Tab **Xuất PDF** (sale và admin đều dùng được): chọn nhãn, chương trình (và Nhóm/Format LKT hoặc HTTT tham chiếu với chương trình không phải Định kỳ), tick nội dung cần in, xem trước, rồi bấm **Xuất PDF** → chọn *Lưu dưới dạng PDF*.
 
-- Khung theo nhận diện nhãn (*Quản trị → Ấn phẩm PDF → Nhận diện nhãn*): IELTS Mentor nền vàng, chữ đen, giá sau ưu đãi màu đỏ. Có thể đổi màu, gắn link logo, sửa chân trang.
-- Tiêu đề mặc định: `CHƯƠNG TRÌNH KHUYẾN MÃI [NHÃN] - THÁNG [m/yyyy]`, lấy theo ngày bắt đầu ở *Thông tin chương trình*. Sửa được ngay trước khi xuất.
-- Cấu trúc trang cố định như ấn phẩm tháng 11/2026. Mọi con số được tính lại từ dữ liệu gốc:
-  1. Bảng giá khóa học + Gói bảo hành + Dịch vụ học tập (A4 dọc)
-  2. Chương trình khuyến mại + Quà tặng khóa học đặc biệt (voucher)
-  3. Quà tặng theo hình thức thanh toán + Bộ quà tặng
-  4. Bảng giá lộ trình gợi ý, mỗi đầu ra một trang (A4 ngang)
-  5. Phụ lục thời hạn trả góp Citime (A4 ngang)
-- Phần chỉ dùng cho ấn phẩm, admin nhập ở *Quản trị*: thời lượng và sĩ số (bảng Khóa học), Bộ quà tặng, Dịch vụ học tập, nhãn cột của từng HTTT, câu chữ lưu ý.
+- **Khổ A4 ngang, phong cách catalogue nhãn hàng:** nền kem, sọc màu nhãn bên trái, nhãn mục nhỏ in hoa, tiêu đề đậm, thẻ be/màu nhãn/tối, bảng có hàng tiêu đề tối và cột giá nhấn màu. Màu, logo và chân trang theo *Quản trị → Ấn phẩm PDF → Nhận diện nhãn*.
+- **Tiêu đề mặc định:** `CHƯƠNG TRÌNH KHUYẾN MÃI [NHÃN] - THÁNG [m/yyyy]`, lấy theo ngày bắt đầu ở *Thông tin chương trình*. Sửa được trước khi xuất.
+- **Các trang** (tick chọn): bìa + 3 con số nổi bật (tính tự động) · học phí từng khóa · ưu đãi theo chương trình + voucher · quà tặng theo HTTT · bộ quà tặng · gói bảo hành & dịch vụ học tập · bảng giá lộ trình (mỗi đầu ra một trang) · phụ lục Citime.
+- **Nội dung lấy hoàn toàn từ dữ liệu gốc admin nạp hằng tháng**, không có nội dung cố định. Ngoài giá/CTKM, admin nhập thêm: thời lượng và sĩ số (bảng Khóa học), Bộ quà tặng, Dịch vụ học tập, nhãn cột HTTT, câu chữ lưu ý.
 - Trang nào có nhiều dòng hơn khổ giấy sẽ tự thu nhỏ cho vừa một trang.
-- `npm test` đối chiếu ấn phẩm với bản IELTS Mentor tháng 11/2026 (giá từng khóa, 3 bảng đầu ra, quà, voucher).
 
 ## Cập nhật dữ liệu hằng tháng
 
