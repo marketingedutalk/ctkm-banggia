@@ -1,7 +1,7 @@
 // Engine tính giá khuyến mại — chuyển 1:1 từ sheet 12_CALCULATOR_SALE.
 // Thuần JavaScript, không phụ thuộc framework: dùng được trong Vue/React/Node (cả server để chống sửa giá).
 
-import { COURSE_DOC_INFO, DOC_SETTINGS, METHOD_DOC_LABELS } from '../data/doc-defaults.js';
+import { COURSE_DOC_INFO, DOC_SETTINGS, METHOD_DOC_LABELS, OLD_BRAND_COLORS } from '../data/doc-defaults.js';
 
 const norm = (s) => String(s ?? '').trim().toLowerCase();
 // Excel MATCH/COUNTIF không phân biệt hoa thường ("Vũ Đài Trí Tuệ" = "Vũ đài trí tuệ")
@@ -80,6 +80,12 @@ export function normalizeData(data) {
   });
   for (const [k, v] of Object.entries(DOC_SETTINGS)) if (s[k] == null) s[k] = JSON.parse(JSON.stringify(v));
   for (const [k, v] of Object.entries(DOC_SETTINGS.docTexts)) if (s.docTexts[k] == null) s.docTexts[k] = v;
+  // Nhãn còn để bộ màu mặc định cũ (chưa tự chỉnh) → dùng bộ màu nhận diện mới
+  for (const b of s.brands) {
+    const fresh = DOC_SETTINGS.brands.find((x) => x.label === b.label);
+    const old = OLD_BRAND_COLORS.some((o) => String(o.bg).toLowerCase() === String(b.bg).toLowerCase() && String(o.bg2).toLowerCase() === String(b.bg2).toLowerCase());
+    if (fresh && old) Object.assign(b, { bg: fresh.bg, bg2: fresh.bg2, ink: fresh.ink, accent: fresh.accent });
+  }
   s.paymentMethods.forEach((m) => {
     const d = METHOD_DOC_LABELS[m.name] ?? { promoLabel: m.name, docLabel: m.name, docShort: m.name, giftCondition: '' };
     for (const k of ['promoLabel', 'docLabel', 'docShort', 'giftCondition']) if (m[k] == null) m[k] = d[k];

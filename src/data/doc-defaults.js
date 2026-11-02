@@ -22,10 +22,11 @@ export const COURSE_DOC_INFO = {
 };
 
 export const DOC_SETTINGS = {
-  // Nhận diện theo nhãn (phong cách catalogue): màu chủ đạo, nền giấy, màu tối, màu cảnh báo, dòng chân trang
+  // Nhận diện theo nhãn (phong cách catalogue): màu chủ đạo, nền giấy, màu tối, màu nhấn (cam), dòng chân trang.
+// IELTS Mentor theo bộ nhận diện "IELTS khó có Mentor": vàng chanh #FBDE44, vàng nhạt caro, cam #F6BD3A, đen.
   brands: [
     {
-      label: 'IELTS Mentor', brandName: 'IELTS Mentor', bg: '#F0C030', bg2: '#FFFCF2', ink: '#161513', accent: '#C8102E',
+      label: 'IELTS Mentor', brandName: 'IELTS Mentor', bg: '#FBDE44', bg2: '#FFFBE8', ink: '#141414', accent: '#E07A00',
       logoUrl: '', footer: 'Áp dụng cho toàn bộ khách hàng\nÁp dụng toàn bộ hệ thống IELTS MENTOR',
     },
     {
@@ -89,3 +90,9 @@ export const METHOD_DOC_LABELS = {
   Sacombank: { promoLabel: 'Trả góp ngân hàng', docLabel: 'Đăng ký trả góp qua ngân hàng', docShort: 'Trả góp ngân hàng', giftCondition: '' },
   Citime: { promoLabel: 'Trả góp Citime', docLabel: 'Đăng ký trả góp qua Citime', docShort: 'Trả góp Citime', giftCondition: '' },
 };
+
+// Bộ màu mặc định cũ của IELTS Mentor — dữ liệu đã lưu còn dùng thì tự đổi sang bộ màu mới
+export const OLD_BRAND_COLORS = [
+  { bg: '#FFD21F', bg2: '#FFE45C' },
+  { bg: '#F0C030', bg2: '#FFFCF2' },
+];
