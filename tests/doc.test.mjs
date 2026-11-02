@@ -14,7 +14,7 @@ const expect = {
   'Đầu ra 7.0+': ['30.360.000', '41.050.000', '54.236.000', '57.350.000', '59.710.000', '66.550.000'],
   'CTKM + voucher': ['Hoàn tiền 800.000đ', 'Hoàn tiền 2.500.000đ', '6.000.000đ', '1.300.000đ'],
   'Quà tặng': ['Bộ quà tặng trị giá 6.770.000đ', '100% phí lãi suất trả góp', 'Hoàn thành tối thiểu 40% học phí trong tháng', 'Bình nước IELTS MENTOR'],
-  'Tiêu đề': ['CHƯƠNG TRÌNH KHUYẾN MÃI IELTS MENTOR - THÁNG 10/2026', 'Áp dụng từ 1/10/2026 đến 31/10/2026', 'Thời hạn trả góp Citime tối đa', 'mức giảm học phí cao nhất', '30%'],
+  'Tiêu đề': ['CHƯƠNG TRÌNH KHUYẾN MÃI IELTS MENTOR - THÁNG 11/2026', 'Áp dụng từ 1/11/2026 đến 30/11/2026', 'Mừng ngày Nhà giáo Việt Nam', 'Thời hạn trả góp Citime tối đa', 'mức giảm học phí cao nhất', '30%'],
 };
 let bad = 0;
 for (const [name, list] of Object.entries(expect)) {
@@ -23,6 +23,24 @@ for (const [name, list] of Object.entries(expect)) {
   bad += miss.length;
 }
 console.log(`Số trang: ${doc.pages}`);
+
+// ---- Định kỳ đặc biệt: đối chiếu ấn phẩm "CTKM ĐỊNH KỲ ĐẶC BIỆT IELTS MENTOR THÁNG 11_2026"
+const sp = buildPromoDoc(data, { label: 'IELTS Mentor', program: 'Định kỳ đặc biệt' });
+const spText = sp.html.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ');
+const spExpect = {
+  'ĐB · bảng ưu đãi': ['Hoàn thành toàn bộ trong tháng', 'Chia giai đoạn', 'Trả góp ngân hàng', 'Trả góp Citime', 'Toàn bộ các khóa học',
+    'Combo từ 2 khoá trở lên', '37%', '33%', 'Quy định tham gia chương trình'],
+  'ĐB · giá từng khóa': ['940.000', '4.020.000', '5.880.000', '6.900.000', '9.900.000', '14.700.000', '1.400.000', '5.000.000'],
+  'ĐB · kịch bản': ['Đóng Full · Giảm 40%', 'Trả góp Sacombank 9 & 12 tháng · Giảm 36%', 'Trả góp Citime 8 & 9 tháng · Giảm 34%', 'Trả góp Citime 12 & 15 tháng · Giảm 33%'],
+  'ĐB · đầu ra 5.5+': ['16.300.000', '17.245.000', '18.820.000', '17.700.000', '20.220.000', '25.990.000', '33.021.000', '34.980.000', '39.726.000', '44.486.000'],
+  'ĐB · đầu ra 7.0+': ['24.600.000', '34.500.000', '27.060.000', '59.501.000', '66.341.000'],
+};
+for (const [name, list] of Object.entries(spExpect)) {
+  const miss = list.filter((v) => !spText.includes(v));
+  console.log(`${miss.length ? '✗' : '✓'} ${name}${miss.length ? ` — thiếu: ${miss.join(', ')}` : ''}`);
+  bad += miss.length;
+}
+console.log(`Định kỳ đặc biệt: ${sp.pages} trang`);
 
 // Các chương trình khác vẫn dựng được
 for (const opts of [

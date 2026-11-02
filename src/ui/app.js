@@ -7,7 +7,8 @@ import {
 import { icon } from './icons.js';
 import { tableDefs, formatCell, parseCell } from './admin-tables.js';
 import { importWorkbook } from './excel-import.js';
-import { buildPromoDoc, defaultTitle, outputsFor, SECTIONS } from '../doc/promo-doc.js';
+import { buildPromoDoc, defaultTitle, outputsFor, SECTIONS, scenariosFor, defaultScenarios } from '../doc/promo-doc.js';
+import { monthOfDoc } from '../store.js';
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -15,21 +16,51 @@ const vnd = (n) => `${Math.round(Number(n) || 0).toLocaleString('vi-VN')}đ`;
 const pct = (n) => `${+(Number(n || 0) * 100).toFixed(2)}%`;
 const fmtDate = (s) => (s ? s.split('-').reverse().join('/') : '');
 const eq = (a, b) => String(a ?? '').trim().toLowerCase() === String(b ?? '').trim().toLowerCase();
+const thisMonth = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+const monthText = (m) => {
+  const [y, mm] = String(m).split('-');
+  return `Tháng ${Number(mm)}/${y}`;
+};
+// Ngày đầu / cuối tháng 'YYYY-MM'
+const monthBounds = (m) => {
+  const [y, mm] = m.split('-').map(Number);
+  return [`${m}-01`, `${m}-${String(new Date(y, mm, 0).getDate()).padStart(2, '0')}`];
+};
 
 export async function mountPromoTool(root, opts = {}) {
   const { store, allowRoleSwitch = false, user = null } = opts;
+  // Dữ liệu lưu theo tháng: sale xem tháng hiện tại (trống nếu admin chưa tạo), admin sửa từng tháng, PDF chọn tháng + năm
+  const docs = new Map();
+  async function getDoc(m) {
+    if (!docs.has(m)) {
+      const d = await store.load(m);
+      docs.set(m, d ? normalizeData(d) : null);
+    }
+    return docs.get(m);
+  }
   const S = {
     role: opts.role === 'admin' ? 'admin' : 'sale',
     view: 'calc',
-    data: normalizeData(await store.load()),
+    months: await store.listMonths(),
+    month: thisMonth(),
+    data: null,
     calc: null,
     table: null,
     pdf: null,
-    admin: { tab: 'courses', label: '', q: '', draft: null, dirty: false, issues: [] },
+    admin: { tab: 'courses', label: '', q: '', draft: null, dirty: false, issues: [], month: '', newMonth: '', copyFrom: '' },
   };
-  S.calc = defaultCalc(S.data);
-  S.table = { ...defaultCalc(S.data), output: '' };
-  S.pdf = { ...defaultCalc(S.data), title: '', sections: SECTIONS.map((x) => x.id), outputs: [] };
+  S.data = await getDoc(S.month);
+  S.admin.month = S.months.includes(S.month) ? S.month : (S.months[0] ?? S.month);
+  await getDoc(S.admin.month);
+  const resetViews = () => {
+    S.calc = defaultCalc(S.data);
+    S.table = { ...defaultCalc(S.data), output: '' };
+  };
+  resetViews();
+  S.pdf = { ...defaultCalc(S.data), month: S.month, title: '', sections: SECTIONS.map((x) => x.id), outputs: [], scenarios: [] };
 
   root.classList.add('pt-root');
   root.innerHTML = '';
@@ -59,7 +90,7 @@ export async function mountPromoTool(root, opts = {}) {
             <button class="${S.role === 'admin' ? 'is-active' : ''}" data-act="role" data-v="admin">Admin</button></div>`
         : '');
     body.innerHTML = `<div class="pt-container">${
-      S.view === 'calc' ? viewCalc() : S.view === 'table' ? viewTable() : S.view === 'pdf' ? viewPdf() : viewAdmin()
+      S.view === 'pdf' ? viewPdf() : S.view === 'admin' ? viewAdmin() : !S.data ? viewEmptyMonth() : S.view === 'calc' ? viewCalc() : viewTable()
     }</div>`;
     if (S.view === 'admin') renderAdminTable();
     if (S.view === 'pdf') loadPdfPreview();
@@ -67,6 +98,7 @@ export async function mountPromoTool(root, opts = {}) {
 
   // ---------------------------------------------------------------- Tính giá (sale)
   function defaultCalc(d) {
+    if (!d) return { label: '', program: '', method: '', term: 0, warranty: '', lktGroup: '', lktFormat: '', selected: {} };
     const label = d.settings.labels[0]?.name ?? '';
     return {
       label,
@@ -113,6 +145,25 @@ export async function mountPromoTool(root, opts = {}) {
           ${dis && typeof dis === 'string' ? `title="${esc(dis)}"` : ''}>${esc(fmt(o))}${h ? ` <small>${esc(h)}</small>` : ''}</button>`;
       })
       .join('')}</div>`;
+
+  // Chọn tháng xem (sale): các tháng đã có chương trình + tháng hiện tại
+  function monthPicker() {
+    const list = [...new Set([thisMonth(), ...S.months])].sort().reverse();
+    return `<select class="pt-select" style="height:36px;width:150px" data-act="view-month" title="Tháng chương trình">${list
+      .map((m) => `<option value="${m}" ${m === S.month ? 'selected' : ''}>${monthText(m)}${S.months.includes(m) ? '' : ' (trống)'}</option>`)
+      .join('')}</select>`;
+  }
+
+  function viewEmptyMonth() {
+    return (
+      head({ ic: 'calendar', title: `Chương trình khuyến mại ${monthText(S.month).toLowerCase()}`, sub: 'Chưa có dữ liệu', actions: monthPicker() }) +
+      `<div class="pt-section"><div class="pt-empty" style="padding:56px 24px">
+        <div style="font-size:16px;font-weight:600;color:var(--pt-ink);margin-bottom:6px">Chưa có chương trình khuyến mại ${monthText(S.month).toLowerCase()}</div>
+        Admin chưa cập nhật chương trình cho tháng này. Bạn có thể chọn xem lại các tháng trước ở ô chọn tháng phía trên.
+        ${S.role === 'admin' ? `<div style="margin-top:16px"><button class="pt-btn pt-btn--primary" data-act="goto-create" data-v="${S.month}">${icon('plus', 16)}Tạo chương trình ${monthText(S.month).toLowerCase()}</button></div>` : ''}
+      </div></div>`
+    );
+  }
 
   function viewCalc() {
     const d = S.data;
@@ -230,6 +281,7 @@ export async function mountPromoTool(root, opts = {}) {
       head({
         ic: 'calc',
         title: 'Tính giá khuyến mại',
+        actions: monthPicker(),
         sub: `${esc(s.campaignName)} · Áp dụng ${fmtDate(s.validFrom)} – ${fmtDate(s.validTo)}`,
         stats,
       }) +
@@ -258,8 +310,7 @@ export async function mountPromoTool(root, opts = {}) {
     );
   }
 
-  function setCalc(c, field, value) {
-    const d = S.data;
+  function setCalc(c, field, value, d = S.data) {
     if (field === 'term') value = Number(value);
     c[field] = value;
     if (field === 'label') {
@@ -360,6 +411,7 @@ export async function mountPromoTool(root, opts = {}) {
       head({
         ic: 'table',
         title: 'Bảng giá lộ trình gợi ý',
+        actions: monthPicker(),
         sub: `Học phí đã gồm ưu đãi theo bộ lọc · ${esc(d.settings.campaignName)}`,
         stats:
           stat('grey', 'Tổng lộ trình', rows.length, 'route') +
@@ -384,34 +436,39 @@ export async function mountPromoTool(root, opts = {}) {
   let pdfDoc = null;
 
   function viewPdf() {
-    const d = S.data;
     const p = S.pdf;
-    const prog = findProgram(d, p.program);
-    pdfDoc = buildPromoDoc(d, p);
-    const sel = (f, options, cur, fmt = (o) => o, allLabel = null) =>
-      `<select class="pt-select" data-act="pdf" data-f="${f}">${allLabel != null ? `<option value="">${allLabel}</option>` : ''}${options
+    const d = docs.get(p.month) ?? null;
+    const [py, pm] = p.month.split('-');
+    const years = [...new Set([...S.months.map((m) => m.slice(0, 4)), py, String(new Date().getFullYear() + 1)])].sort();
+    const monthSel = `<div class="pt-grid" style="grid-template-columns:1fr 1fr;gap:8px">
+        <select class="pt-select" data-act="pdf-month" data-part="m">${Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'))
+          .map((m) => `<option value="${m}" ${m === pm ? 'selected' : ''}>Tháng ${Number(m)}${S.months.includes(`${py}-${m}`) ? '' : ' · trống'}</option>`).join('')}</select>
+        <select class="pt-select" data-act="pdf-month" data-part="y">${years.map((y) => `<option ${y === py ? 'selected' : ''}>${y}</option>`).join('')}</select></div>`;
+    pdfDoc = d ? buildPromoDoc(d, p) : null;
+    const prog = d ? findProgram(d, p.program) : null;
+    const sel = (f, options, cur, fmt = (o) => o) =>
+      `<select class="pt-select" data-act="pdf" data-f="${f}">${options
         .map((o) => `<option value="${esc(o)}" ${eq(o, cur) ? 'selected' : ''}>${esc(fmt(o))}</option>`)
         .join('')}</select>`;
     const check = (act, v, on, text) =>
       `<label style="display:flex;gap:8px;align-items:center;cursor:pointer;font-size:13px">
         <input type="checkbox" data-act="${act}" value="${esc(v)}" ${on ? 'checked' : ''} style="width:16px;height:16px;accent-color:var(--pt-purple)">${text}</label>`;
-    const outputs = outputsFor(d, p.label);
-    const periodic = prog?.type === 'DINH_KY';
+    const outputs = d ? outputsFor(d, p.label) : [];
+    const scen = d && prog?.type !== 'DINH_KY' ? scenariosFor(d, p) : [];
+    const scenOn = p.scenarios.length ? p.scenarios : d ? defaultScenarios(d, p) : [];
 
     const options = `<div class="pt-section" style="margin-top:0">
       <div class="pt-section-head"><div class="pt-section-icon">${icon('settings', 16)}</div>
-        <div><div class="pt-section-title">Tùy chọn ấn phẩm</div><div class="pt-section-sub">Khung theo nhận diện nhãn · số liệu lấy từ dữ liệu gốc</div></div></div>
+        <div><div class="pt-section-title">Tùy chọn ấn phẩm</div><div class="pt-section-sub">Khổ A4 ngang · số liệu lấy từ dữ liệu gốc của tháng đã chọn</div></div></div>
       <div class="pt-section-body"><div class="pt-form" style="gap:12px">
-        <div class="pt-field"><label>Nhãn</label>${sel('label', d.settings.labels.map((l) => l.name), p.label)}</div>
+        <div class="pt-field"><label>Thời gian (tháng + năm)</label>${monthSel}</div>
+        ${d
+          ? `<div class="pt-field"><label>Nhãn</label>${sel('label', d.settings.labels.map((l) => l.name), p.label)}</div>
         <div class="pt-field"><label>Chương trình khuyến mại</label>${sel('program', d.settings.programs.map((x) => x.name), p.program)}</div>
         ${prog?.type === 'LKT'
           ? `<div class="pt-field"><label>Nhóm LKT</label>${sel('lktGroup', lktGroupsFor(d, p.label).map((g) => g.name), p.lktGroup)}</div>
              <div class="pt-field"><label>Format LKT (cho bảng giá)</label>${sel('lktFormat', lktFormatsFor(d, p.label, p.lktGroup).map((r) => r.format), p.lktFormat)}</div>`
           : ''}
-        ${periodic
-          ? ''
-          : `<div class="pt-field"><label>Hình thức thanh toán tính bảng giá</label>${sel('method', d.settings.paymentMethods.map((m) => m.name), p.method)}</div>
-             <div class="pt-field"><label>Kỳ hạn</label>${sel('term', termsFor(d, p.method).map(String), String(p.term), (x) => (Number(x) ? `${x} tháng` : 'Không kỳ hạn'))}</div>`}
         <div class="pt-field"><label>Tên chương trình (tiêu đề)</label>
           <input class="pt-input" data-act="pdf-title" value="${esc(p.title)}" placeholder="${esc(defaultTitle(d, p.label))}"></div>
         <div class="pt-field"><label>Nội dung xuất</label><div style="display:grid;gap:7px">${SECTIONS.map((x) =>
@@ -420,26 +477,43 @@ export async function mountPromoTool(root, opts = {}) {
           ? `<div class="pt-field"><label>Đầu ra trong bảng giá lộ trình</label><div class="pt-chips">${outputs
               .map((o) => check('pdf-out', o, !p.outputs.length || p.outputs.includes(o), esc(o))).join('')}</div></div>`
           : ''}
+        ${p.sections.includes('routes') && scen.length
+          ? `<div class="pt-field"><label>Kịch bản thanh toán trong bảng giá lộ trình <small>(2 kịch bản / trang)</small></label><div style="display:grid;gap:7px">${scen
+              .map((x) => check('pdf-scen', x.id, scenOn.includes(x.id), `${esc(x.title)} · <b>${+(x.pct * 100).toFixed(2)}%</b>`)).join('')}</div></div>`
+          : ''}`
+          : ''}
       </div></div></div>`;
+
+    const preview = !d
+      ? `<div class="pt-empty" style="padding:56px 24px"><div style="font-size:16px;font-weight:600;color:var(--pt-ink);margin-bottom:6px">${monthText(p.month)} chưa có chương trình khuyến mại</div>
+          Admin chưa tạo / cập nhật chương trình cho tháng này nên chưa có ấn phẩm để xuất.</div>`
+      : pdfDoc.pages
+        ? '<iframe id="pt-pdf-frame" title="Xem trước ấn phẩm" style="width:100%;height:78vh;border:0;border-radius:0 0 14px 14px;background:#8a8a8a;display:block"></iframe>'
+        : '<div class="pt-empty">Chưa chọn nội dung nào hoặc chương trình chưa có dữ liệu</div>';
 
     return (
       head({
         ic: 'download',
         title: 'Xuất ấn phẩm chương trình khuyến mại',
         sub: 'Dùng để in ấn, gửi nhà trường. Bấm “Xuất PDF” rồi chọn Lưu dưới dạng PDF (Save as PDF).',
-        actions: `<button class="pt-btn pt-btn--primary" data-act="pdf-print" ${pdfDoc.pages ? '' : 'disabled'}>${icon('download', 16)}Xuất PDF</button>`,
+        actions: `<button class="pt-btn pt-btn--primary" data-act="pdf-print" ${pdfDoc?.pages ? '' : 'disabled'}>${icon('download', 16)}Xuất PDF</button>`,
       }) +
       `<div class="pt-grid" style="grid-template-columns:320px minmax(0,1fr);margin-top:14px;align-items:start" id="pt-pdf-grid">
         ${options}
         <div class="pt-section" style="margin-top:0">
           <div class="pt-section-head"><div class="pt-section-icon">${icon('eye', 16)}</div>
-            <div><div class="pt-section-title">Xem trước</div><div class="pt-section-sub">${pdfDoc.pages} trang khổ A4 · ${esc(pdfDoc.title)}</div></div></div>
-          ${pdfDoc.pages
-            ? '<iframe id="pt-pdf-frame" title="Xem trước ấn phẩm" style="width:100%;height:78vh;border:0;border-radius:0 0 14px 14px;background:#8a8a8a;display:block"></iframe>'
-            : '<div class="pt-empty">Chưa chọn nội dung nào hoặc chương trình chưa có dữ liệu</div>'}
+            <div><div class="pt-section-title">Xem trước</div><div class="pt-section-sub">${pdfDoc ? `${pdfDoc.pages} trang A4 ngang · ${esc(pdfDoc.title)}` : monthText(p.month)}</div></div></div>
+          ${preview}
         </div>
       </div>`
     );
+  }
+
+  // Đổi tháng xuất PDF: giữ nhãn / chương trình nếu tháng đó vẫn có, không thì về mặc định
+  async function setPdfMonth(m) {
+    const d = await getDoc(m);
+    const keep = d && d.settings.labels.some((l) => eq(l.name, S.pdf.label)) && d.settings.programs.some((x) => eq(x.name, S.pdf.program));
+    S.pdf = { ...(keep ? S.pdf : { ...S.pdf, ...defaultCalc(d) }), month: m, outputs: [], scenarios: [] };
   }
 
   function loadPdfPreview() {
@@ -467,12 +541,67 @@ export async function mountPromoTool(root, opts = {}) {
   }
 
   // ---------------------------------------------------------------- Quản trị (admin)
-  const draft = () => (S.admin.draft ??= clone(S.data));
+  const draft = () => (S.admin.draft ??= clone(docs.get(S.admin.month)));
+
+  // Thanh tháng: chọn tháng đang sửa + tạo chương trình tháng mới (sao chép từ tháng trước hoặc dữ liệu Excel gốc)
+  function monthBar() {
+    const A = S.admin;
+    const list = [...new Set([...S.months, ...(A.draft ? [A.month] : [])])].sort().reverse();
+    const latest = S.months[0];
+    const next = (() => {
+      const [y, m] = (latest ?? thisMonth()).split('-').map(Number);
+      return latest ? `${m === 12 ? y + 1 : y}-${String(m === 12 ? 1 : m + 1).padStart(2, '0')}` : thisMonth();
+    })();
+    return `<div class="pt-section" style="margin-top:14px"><div class="pt-section-head" style="flex-wrap:wrap">
+      <div class="pt-section-icon">${icon('calendar', 16)}</div>
+      <div><div class="pt-section-title">Chương trình theo tháng</div><div class="pt-section-sub">Mỗi tháng lưu riêng — tháng cũ giữ nguyên làm lưu trữ, tháng chưa tạo thì sale thấy trống</div></div>
+      <div class="pt-section-actions">
+        <label class="pt-label" style="margin-right:2px">Đang sửa</label>
+        <select class="pt-select" style="height:36px;width:190px" data-act="admin-month">${list.length
+          ? list.map((m) => `<option value="${m}" ${m === A.month ? 'selected' : ''}>${monthText(m)}${S.months.includes(m) ? '' : ' (chưa lưu)'}</option>`).join('')
+          : '<option>Chưa có tháng nào</option>'}</select>
+        <span style="width:1px;height:26px;background:var(--pt-line);margin:0 4px"></span>
+        <input class="pt-input" type="month" style="height:36px;width:160px" value="${esc(A.newMonth || next)}" data-act="new-month" title="Tháng cần tạo">
+        <select class="pt-select" style="height:36px;width:220px" data-act="copy-from" title="Dữ liệu ban đầu">
+          ${S.months.map((m) => `<option value="${m}" ${m === (A.copyFrom || latest) ? 'selected' : ''}>Sao chép từ ${monthText(m).toLowerCase()}</option>`).join('')}
+          <option value="seed" ${A.copyFrom === 'seed' || !latest ? 'selected' : ''}>Từ dữ liệu Excel gốc</option></select>
+        <button class="pt-btn pt-btn--primary pt-btn--sm" data-act="create-month">${icon('plus', 15)}Tạo tháng mới</button>
+      </div></div></div>`;
+  }
+
+  async function createMonth() {
+    const A = S.admin;
+    const bar = body.querySelector('[data-act="new-month"]');
+    const m = (bar?.value || A.newMonth || '').slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(m)) return toast('Chọn tháng cần tạo');
+    if (S.months.includes(m)) {
+      A.month = m;
+      A.draft = null;
+      toast(`${monthText(m)} đã có — chuyển sang sửa tháng này`);
+      return;
+    }
+    if (A.dirty && !confirm('Đang có thay đổi chưa lưu. Bỏ thay đổi để tạo tháng mới?')) return;
+    const src = A.copyFrom || S.months[0] || 'seed';
+    const doc = normalizeData(src === 'seed' ? await store.seed() : clone(await getDoc(src)));
+    [doc.settings.validFrom, doc.settings.validTo] = monthBounds(m);
+    doc.settings.campaignName = '';
+    A.month = m;
+    A.draft = doc;
+    A.dirty = true;
+    A.issues = [];
+    toast(`Đã tạo ${monthText(m).toLowerCase()} (chưa lưu) — cập nhật giá, CTKM rồi bấm Lưu & áp dụng`);
+  }
   const getRows = (def) => def.path.reduce((o, k) => o[k], draft());
 
   function viewAdmin() {
-    const d = draft();
     const A = S.admin;
+    if (!docs.get(A.month) && !A.draft)
+      return (
+        head({ ic: 'db', title: 'Quản trị dữ liệu gốc', sub: 'Chưa có chương trình nào — tạo tháng đầu tiên để bắt đầu.' }) +
+        monthBar() +
+        `<div class="pt-section"><div class="pt-empty" style="padding:48px 24px">${monthText(A.month)} chưa có chương trình. Chọn tháng và nguồn dữ liệu ở trên rồi bấm <b>Tạo tháng mới</b>.</div></div>`
+      );
+    const d = draft();
     const defs = tableDefs(d);
     const def = defs.find((x) => x.id === A.tab);
     const groups = [...new Set(defs.map((x) => x.group))];
@@ -522,19 +651,20 @@ export async function mountPromoTool(root, opts = {}) {
       head({
         ic: 'db',
         title: 'Quản trị dữ liệu gốc',
-        sub: 'Nhập giá gốc, CTKM, quà tặng… Sale chỉ xem kết quả tính theo dữ liệu này.',
+        sub: `Đang sửa chương trình ${monthText(A.month).toLowerCase()} (${fmtDate(d.settings.validFrom)} – ${fmtDate(d.settings.validTo)}). Sale chỉ xem kết quả tính theo dữ liệu này.`,
         actions: `
           <label class="pt-btn pt-btn--ghost pt-btn--sm" style="cursor:pointer">${icon('sheet', 15)}Nhập từ Excel<input type="file" accept=".xlsx" hidden data-act="import-xlsx"></label>
           <label class="pt-btn pt-btn--ghost pt-btn--sm" style="cursor:pointer">${icon('upload', 15)}Nhập JSON<input type="file" accept=".json" hidden data-act="import-json"></label>
           <button class="pt-btn pt-btn--ghost pt-btn--sm" data-act="export-json">${icon('download', 15)}Xuất JSON</button>`,
         stats,
       }) +
+      monthBar() +
       `<div class="pt-admin"><nav class="pt-menu">${menu}</nav><div>${content}</div></div>
        <div class="pt-savebar" id="pt-savebar" ${A.dirty ? '' : 'hidden'}>${savebar()}</div>`
     );
   }
 
-  const savebar = () => `${icon('alert', 18)}<span>Có thay đổi chưa lưu — sale vẫn đang dùng dữ liệu cũ.</span>
+  const savebar = () => `${icon('alert', 18)}<span>Có thay đổi chưa lưu cho ${monthText(S.admin.month).toLowerCase()} — sale vẫn đang dùng dữ liệu cũ.</span>
     <span class="pt-band-spacer"></span>
     <button class="pt-btn pt-btn--ghost pt-btn--sm" data-act="discard">Hủy thay đổi</button>
     <button class="pt-btn pt-btn--primary pt-btn--sm" data-act="save" style="background:#fff;color:var(--pt-purple)">${icon('save', 15)}Lưu & áp dụng</button>`;
@@ -626,12 +756,18 @@ export async function mountPromoTool(root, opts = {}) {
     try {
       d.updatedAt = new Date().toISOString();
       if (user) d.updatedBy = user.email ?? user.name ?? '';
-      await store.save(d);
-      S.data = normalizeData(clone(d));
+      const m = S.admin.month;
+      await store.save(m, d);
+      docs.set(m, normalizeData(clone(d)));
+      S.months = [...new Set([...S.months, m])].sort().reverse();
+      if (m === S.month) {
+        S.data = docs.get(m);
+        resetViews();
+      }
       S.admin.draft = null;
       S.admin.dirty = false;
       S.admin.issues = [];
-      toast('Đã lưu — sale sẽ thấy giá mới ngay');
+      toast(`Đã lưu ${monthText(m).toLowerCase()}${m === S.month ? ' — sale thấy giá mới ngay' : ''}`);
       render();
     } catch (e) {
       toast(`Lưu thất bại: ${e.message}`);
@@ -713,7 +849,6 @@ export async function mountPromoTool(root, opts = {}) {
         return;
       case 'tbl-reset':
         S.table = { ...defaultCalc(S.data), output: '' };
-  S.pdf = { ...defaultCalc(S.data), title: '', sections: SECTIONS.map((x) => x.id), outputs: [] };
         break;
       case 'open-route': {
         const t = S.table;
@@ -753,13 +888,24 @@ export async function mountPromoTool(root, opts = {}) {
         A.draft = null;
         A.dirty = false;
         A.issues = [];
+        // Tháng mới tạo mà chưa lưu → quay về tháng đã có
+        if (!S.months.includes(A.month)) A.month = S.months[0] ?? S.month;
+        break;
+      case 'create-month':
+        await createMonth();
+        break;
+      case 'goto-create':
+        S.view = 'admin';
+        A.newMonth = el.dataset.v;
+        if (!S.months.length) A.month = el.dataset.v;
         break;
       case 'export-json':
-        download(`du-lieu-khuyen-mai-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(draft(), null, 1));
+        download(`du-lieu-khuyen-mai-${A.month}.json`, JSON.stringify(draft(), null, 1));
         return;
       case 'reset-seed':
-        if (!confirm('Thay toàn bộ dữ liệu bằng bản gốc nhập từ file Excel ban đầu? (chưa lưu cho tới khi bấm Lưu)')) return;
-        A.draft = await store.reset();
+        if (!confirm(`Thay dữ liệu ${monthText(A.month).toLowerCase()} bằng bản gốc nhập từ file Excel ban đầu? (chưa lưu cho tới khi bấm Lưu)`)) return;
+        A.draft = normalizeData(await store.seed());
+        [A.draft.settings.validFrom, A.draft.settings.validTo] = monthBounds(A.month);
         markDirty();
         A.dirty = true;
         break;
@@ -798,16 +944,55 @@ export async function mountPromoTool(root, opts = {}) {
         markDirty();
         return;
       case 'pdf':
-        setCalc(S.pdf, el.dataset.f, el.value);
+        setCalc(S.pdf, el.dataset.f, el.value, docs.get(S.pdf.month));
         if (el.dataset.f === 'label') S.pdf.outputs = [];
+        S.pdf.scenarios = [];
         break;
+      case 'pdf-month': {
+        const [y, m] = S.pdf.month.split('-');
+        await setPdfMonth(el.dataset.part === 'y' ? `${el.value}-${m}` : `${y}-${el.value}`);
+        break;
+      }
+      case 'pdf-scen': {
+        const d = docs.get(S.pdf.month);
+        const all = scenariosFor(d, S.pdf).map((x) => x.id);
+        const cur = new Set(S.pdf.scenarios.length ? S.pdf.scenarios : defaultScenarios(d, S.pdf));
+        if (el.checked) cur.add(el.value);
+        else cur.delete(el.value);
+        // Bỏ chọn hết → giữ lại 1 kịch bản để bảng giá không rỗng
+        S.pdf.scenarios = all.filter((x) => cur.has(x));
+        if (!S.pdf.scenarios.length) S.pdf.scenarios = [all[0]];
+        break;
+      }
+      case 'view-month':
+        S.month = el.value;
+        S.data = await getDoc(S.month);
+        resetViews();
+        break;
+      case 'admin-month':
+        if (S.admin.dirty && !confirm('Đang có thay đổi chưa lưu. Bỏ thay đổi để chuyển tháng?')) {
+          el.value = S.admin.month;
+          return;
+        }
+        S.admin.month = el.value;
+        S.admin.draft = null;
+        S.admin.dirty = false;
+        S.admin.issues = [];
+        await getDoc(el.value);
+        break;
+      case 'new-month':
+        S.admin.newMonth = el.value;
+        return;
+      case 'copy-from':
+        S.admin.copyFrom = el.value;
+        return;
       case 'pdf-title':
         S.pdf.title = el.value.trim();
         break;
       case 'pdf-sec':
       case 'pdf-out': {
         const key = el.dataset.act === 'pdf-sec' ? 'sections' : 'outputs';
-        const all = key === 'sections' ? SECTIONS.map((x) => x.id) : outputsFor(S.data, S.pdf.label);
+        const all = key === 'sections' ? SECTIONS.map((x) => x.id) : outputsFor(docs.get(S.pdf.month), S.pdf.label);
         const cur = new Set(S.pdf[key].length || key === 'sections' ? S.pdf[key] : all);
         if (el.checked) cur.add(el.value);
         else cur.delete(el.value);
@@ -834,6 +1019,8 @@ export async function mountPromoTool(root, opts = {}) {
         try {
           const next = el.dataset.act === 'import-json' ? JSON.parse(await file.text()) : await importWorkbook(file, draft());
           if (!next?.settings || !Array.isArray(next.courses)) throw new Error('File không đúng cấu trúc');
+          // File JSON của tháng khác → giữ khung ngày của tháng đang sửa
+          if (monthOfDoc(next) !== A.month) [next.settings.validFrom, next.settings.validTo] = monthBounds(A.month);
           A.draft = normalizeData(next);
           A.issues = validateData(next);
           markDirty();
@@ -868,7 +1055,12 @@ export async function mountPromoTool(root, opts = {}) {
       render();
     },
     async reload() {
-      S.data = normalizeData(await store.load());
+      docs.clear();
+      S.months = await store.listMonths();
+      S.data = await getDoc(S.month);
+      await getDoc(S.admin.month);
+      await getDoc(S.pdf.month);
+      resetViews();
       render();
     },
   };

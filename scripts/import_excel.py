@@ -104,9 +104,9 @@ def main(path):
     sacombank_terms = sorted({s["term"] for s in special if s["method"] == "Sacombank"})
     labels = sorted({c["label"] for c in courses}, key=["IELTS Mentor", "CLASSUP 1-8", "CLASSUP 1-1"].index)
     settings = {
-        "campaignName": "Chương trình khuyến mại tháng 10/2026",
-        "validFrom": "2026-10-01",
-        "validTo": "2026-10-31",
+        "campaignName": "Mừng ngày Nhà giáo Việt Nam",
+        "validFrom": "2026-11-01",
+        "validTo": "2026-11-30",
         "labels": [
             {"name": l, "blockedMethods": ["Sacombank", "Citime"] if l == "CLASSUP 1-1" else []}
             for l in labels

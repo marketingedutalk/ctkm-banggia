@@ -81,8 +81,8 @@ export function normalizeData(data) {
   for (const [k, v] of Object.entries(DOC_SETTINGS)) if (s[k] == null) s[k] = JSON.parse(JSON.stringify(v));
   for (const [k, v] of Object.entries(DOC_SETTINGS.docTexts)) if (s.docTexts[k] == null) s.docTexts[k] = v;
   s.paymentMethods.forEach((m) => {
-    const d = METHOD_DOC_LABELS[m.name] ?? { docLabel: m.name, docShort: m.name, giftCondition: '' };
-    for (const k of ['docLabel', 'docShort', 'giftCondition']) if (m[k] == null) m[k] = d[k];
+    const d = METHOD_DOC_LABELS[m.name] ?? { promoLabel: m.name, docLabel: m.name, docShort: m.name, giftCondition: '' };
+    for (const k of ['promoLabel', 'docLabel', 'docShort', 'giftCondition']) if (m[k] == null) m[k] = d[k];
   });
   return data;
 }

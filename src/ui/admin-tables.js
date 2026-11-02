@@ -184,11 +184,12 @@ export function tableDefs(d) {
         { key: 'giftGroup', label: 'Nhóm quà', type: 'text' },
         { key: 'citime', label: 'Citime', type: 'bool' },
         { key: 'allowSingle', label: 'Cho khóa lẻ', type: 'bool' },
+        { key: 'promoLabel', label: 'Tên trên bảng ưu đãi (PDF)', type: 'text' },
         { key: 'docLabel', label: 'Cột bảng quà (PDF)', type: 'text' },
         { key: 'docShort', label: 'Cột bảng lộ trình (PDF)', type: 'multiline' },
         { key: 'giftCondition', label: 'Điều kiện nhận quà (PDF)', type: 'text', wide: true },
       ],
-      blank: () => ({ name: '', terms: [0], giftGroup: '', citime: false, allowSingle: false, docLabel: '', docShort: '', giftCondition: '' }),
+      blank: () => ({ name: '', terms: [0], giftGroup: '', citime: false, allowSingle: false, promoLabel: '', docLabel: '', docShort: '', giftCondition: '' }),
     },
     {
       id: 'labels', group: 'Cấu hình', icon: 'tag', title: 'Nhãn & giới hạn', path: ['settings', 'labels'],
@@ -226,6 +227,17 @@ export function tableDefs(d) {
         { key: 'footer', label: 'Chân trang', type: 'multiline', wide: true },
       ],
       blank: (label) => ({ label, brandName: String(label).toUpperCase(), bg: '#F0C030', bg2: '#FFFCF2', ink: '#161513', accent: '#C8102E', logoUrl: '', footer: '' }),
+    },
+    {
+      id: 'programRules', group: 'Ấn phẩm PDF', icon: 'sheet', title: 'Quy định chương trình', path: ['settings', 'programRules'],
+      desc: 'Khối "Quy định tham gia chương trình" in dưới bảng ưu đãi. Mỗi dòng là một quy định. Cập nhật theo từng tháng.',
+      byLabel: true,
+      columns: [
+        { key: 'label', label: 'Nhãn', type: 'select', options: labels },
+        { key: 'program', label: 'Chương trình', type: 'select', options: programs },
+        { key: 'rules', label: 'Quy định (mỗi dòng 1 ý)', type: 'multiline', wide: true },
+      ],
+      blank: (label) => ({ label, program: programs[0], rules: '' }),
     },
     {
       id: 'giftSets', group: 'Ấn phẩm PDF', icon: 'gift', title: 'Bộ quà tặng', path: ['settings', 'giftSets'],

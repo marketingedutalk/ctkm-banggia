@@ -57,6 +57,17 @@ export const DOC_SETTINGS = {
     { label: 'IELTS Mentor', value: 6180000, items: '1 Máy tính bảng IvyPad Smart 5\n1 Đèn thông minh chữ G N69\n1 Bình nước IELTS MENTOR' },
     { label: 'IELTS Mentor', value: 6770000, items: '1 Máy tính bảng IvyPad Smart 5\n1 Đèn thông minh chữ G N69\n1 Tai nghe không dây ZTC Air A501' },
   ],
+  // Quy định tham gia theo chương trình (in dưới bảng ưu đãi). Mỗi tháng admin cập nhật.
+  programRules: [
+    {
+      label: 'IELTS Mentor', program: 'Định kỳ đặc biệt',
+      rules: 'Chương trình không áp dụng đồng thời với các chương trình khuyến mại khác trong tháng.\n'
+        + 'Chương trình chỉ áp dụng với lộ trình IELTS (không áp dụng với lộ trình Mentor English Mastery).\n'
+        + 'Quà tặng khóa học đặc biệt áp dụng cho các khóa học đặc biệt theo danh sách có trong lộ trình khóa học khách hàng đăng ký.\n'
+        + 'Số lượng voucher giảm học phí được áp dụng tương ứng với số khóa học đặc biệt có trong lộ trình mà khách hàng đăng ký.\n'
+        + 'Voucher giảm học phí được trừ trực tiếp vào học phí khi đăng ký học. Áp dụng đồng thời với các mức giảm giá.',
+    },
+  ],
   docTexts: {
     cashbackLabel: 'Đăng ký trong 48h',
     warrantyDuration: 'Theo lộ trình khoá học đăng ký',
@@ -70,11 +81,11 @@ export const DOC_SETTINGS = {
 
 // Nhãn cột trên ấn phẩm cho từng hình thức thanh toán
 export const METHOD_DOC_LABELS = {
-  Full: { docLabel: 'Đăng ký Full học phí', docShort: 'Đóng Full', giftCondition: '' },
-  'Giai đoạn': {
+  Full: { promoLabel: 'Hoàn thành toàn bộ trong tháng', docLabel: 'Đăng ký Full học phí', docShort: 'Đóng Full', giftCondition: '' },
+  'Giai đoạn': { promoLabel: 'Chia giai đoạn',
     docLabel: 'Đăng ký trả theo giai đoạn', docShort: 'Trả giai đoạn\n(Đóng 40% học phí lần đầu)',
     giftCondition: 'Hoàn thành tối thiểu 40% học phí trong tháng',
   },
-  Sacombank: { docLabel: 'Đăng ký trả góp qua ngân hàng', docShort: 'Trả góp ngân hàng', giftCondition: '' },
-  Citime: { docLabel: 'Đăng ký trả góp qua Citime', docShort: 'Trả góp Citime', giftCondition: '' },
+  Sacombank: { promoLabel: 'Trả góp ngân hàng', docLabel: 'Đăng ký trả góp qua ngân hàng', docShort: 'Trả góp ngân hàng', giftCondition: '' },
+  Citime: { promoLabel: 'Trả góp Citime', docLabel: 'Đăng ký trả góp qua Citime', docShort: 'Trả góp Citime', giftCondition: '' },
 };

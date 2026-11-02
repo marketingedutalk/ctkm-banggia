@@ -90,9 +90,8 @@ function context(data, opts) {
   const prog = findProgram(data, opts.program);
   const periodic = prog?.type === 'DINH_KY';
   const methods = data.settings.paymentMethods;
-  const method = periodic ? (methods.find((m) => m.allowSingle) ?? methods[0]).name : opts.method;
-  const fixed = (findMethod(data, method)?.terms ?? [0]).every((t) => Number(t) === 0);
-  const term = fixed ? 0 : Number(opts.term) || 0;
+  // Giá từng khóa (đăng ký 1 khóa) luôn tính theo hình thức được phép học lẻ (Full)
+  const single = (methods.find((m) => m.allowSingle) ?? methods[0]).name;
   return {
     label: opts.label,
     program: opts.program,
@@ -100,16 +99,60 @@ function context(data, opts) {
     periodic,
     lktGroup: opts.lktGroup,
     lktFormat: opts.lktFormat,
-    method,
-    term,
-    scope: periodic
-      ? 'Áp dụng cho toàn bộ hình thức thanh toán'
-      : `Tính cho hình thức ${method}${term ? ` ${term} tháng` : ''}${prog?.type === 'LKT' && opts.lktFormat ? ` · ${opts.lktGroup} – ${opts.lktFormat}` : ''}`,
+    single,
     q(items, extra = {}) {
       return quote(data, { label: opts.label, program: opts.program, lktGroup: opts.lktGroup, lktFormat: opts.lktFormat,
-        method, term, warranty: '', items, ...extra });
+        method: single, term: 0, warranty: '', items, ...extra });
     },
   };
+}
+
+/**
+ * Kịch bản thanh toán cho bảng giá lộ trình của chương trình không phải Định kỳ:
+ * gom các kỳ hạn liền nhau cùng % giảm, VD "Trả góp Citime 8 & 9 tháng · Giảm 34%".
+ */
+export function scenariosFor(data, opts) {
+  const prog = findProgram(data, opts.program);
+  if (!prog || prog.type === 'DINH_KY') return [];
+  const base = prog.type === 'LKT' ? findProgram(data, findLktGroup(data, opts.lktGroup)?.baseProgram) : prog;
+  const cut = prog.type === 'LKT'
+    ? lktFormatsFor(data, opts.label, opts.lktGroup).find((f) => eq(f.format, opts.lktFormat))?.cut ?? 0 : 0;
+  const blocked = data.settings.labels.find((l) => eq(l.name, opts.label))?.blockedMethods ?? [];
+  const rows = programRows(data, opts.label, base);
+  const out = [];
+  for (const m of data.settings.paymentMethods) {
+    if (blocked.some((b) => eq(b, m.name))) continue;
+    const mr = rows.filter((r) => eq(r.method, m.name)).sort((a, b) => a.term - b.term);
+    for (const r of mr) {
+      const last = out.at(-1);
+      if (last && last.method === m.name && Math.abs(last.basePct - r.pct) < 1e-9) last.terms.push(Number(r.term));
+      else out.push({ method: m.name, terms: [Number(r.term)], basePct: r.pct, pm: m });
+    }
+  }
+  return out.map((x) => {
+    const terms = x.terms.filter(Boolean);
+    const name = x.pm.allowSingle ? 'Đóng Full' : terms.length ? `Trả góp ${x.method}` : x.pm.promoLabel || x.method;
+    return {
+      id: `${x.method}|${x.terms.join('-')}`,
+      method: x.method,
+      term: Math.min(...x.terms),
+      pct: x.basePct - cut,
+      title: `${name}${terms.length ? ` ${terms.join(' & ')} tháng` : ''}`,
+    };
+  });
+}
+
+/** Mặc định: đóng Full + 2 mức kỳ hạn dài nhất của mỗi hình thức trả góp (giống ấn phẩm định kỳ đặc biệt). */
+export function defaultScenarios(data, opts) {
+  const all = scenariosFor(data, opts);
+  const pick = [];
+  for (const m of [...new Set(all.map((s) => s.method))]) {
+    const list = all.filter((s) => s.method === m);
+    const pm = findMethod(data, m);
+    if (pm?.allowSingle) pick.push(...list);
+    else if (list.some((s) => s.term > 0)) pick.push(...list.slice(pm?.citime ? -2 : -1));
+  }
+  return pick.map((s) => s.id);
 }
 
 function giftFor(data, ctx, method, n) {
@@ -162,10 +205,11 @@ function highlights(data, ctx) {
 function pageCover(data, ctx, brand, title) {
   const s = data.settings;
   const hl = highlights(data, ctx);
+  const nScen = scenariosFor(data, ctx).length;
   return {
     cls: 'cover',
     html: `<div class="cv-l">
-        <div class="kick">${brand.logoUrl ? `<img src="${esc(brand.logoUrl)}" alt="">` : 'Chương trình khuyến mãi'}</div>
+        <div class="kick">${brand.logoUrl ? `<img src="${esc(brand.logoUrl)}" alt="">` : `Chương trình khuyến mãi · Tháng ${monthOf(data)}`}</div>
         <div class="cv-main">
           <div class="cv-brand">${esc(brand.brandName)}</div>
           <div class="cv-title">${esc(title)}</div>
@@ -173,8 +217,9 @@ function pageCover(data, ctx, brand, title) {
         </div>
       </div>
       <div class="cv-r">
+        ${s.campaignName ? `<div class="cv-theme">${esc(s.campaignName)}</div>` : ''}
         <div class="cv-prog">${esc(ctx.program)}</div>
-        <div class="cv-scope">${esc(ctx.scope)}</div>
+        <div class="cv-scope">${ctx.periodic ? 'Áp dụng cho toàn bộ hình thức thanh toán' : nScen ? `${nScen} mức ưu đãi theo tiến độ thanh toán` : ''}</div>
         <div class="cv-hl">${hl.map((h) => `<div><b>${esc(h.big)}</b><span>${esc(h.text)}</span></div>`).join('')}</div>
       </div>`,
   };
@@ -195,7 +240,7 @@ function pageCourses(data, ctx) {
   return {
     kick: 'Bảng giá',
     h: 'Học phí từng khóa học',
-    sub: `${ctx.program} · ${ctx.scope.toLowerCase()} · giá đăng ký 1 khóa, tính theo lớp Offline nếu có`,
+    sub: `${ctx.program} · giá đăng ký 1 khóa, đóng full học phí, tính theo lớp Offline nếu có`,
     html: table({
       head: [H({ html: 'Khóa học', cls: 'left' }, 'Mã khóa', 'Thời lượng', 'Sĩ số Offline', 'Sĩ số Online', 'Giá gốc', 'Voucher', { html: 'Giá sau khuyến mại', cls: 'hot' })],
       rows,
@@ -204,12 +249,38 @@ function pageCourses(data, ctx) {
   };
 }
 
+// "Khóa học áp dụng" theo loại áp dụng của dòng CTKM
+function appliesText(r) {
+  if (r.applyType === 'TOAN_BO') return 'Toàn bộ các khóa học';
+  if (r.applyType === 'LO_TRINH_CU_THE') return 'Theo từng combo có bảng thông tin kèm theo (phụ lục Citime)';
+  return `Combo từ ${Number(r.minCourses) || 2} khoá trở lên`;
+}
+
+function voucherBlock(data, ctx, split) {
+  const vouchers = [];
+  for (const cc of coursesForLabel(data, ctx.label))
+    for (const mode of cc.modes) {
+      const v = ctx.q([{ code: cc.code, mode }]).lines[0]?.voucher ?? 0;
+      if (v > 0) vouchers.push([{ html: `${esc(cc.name)}${cc.modes.length > 1 ? ` <span class="muted">${esc(mode)}</span>` : ''}`, cls: 'left' }, { html: `${num(v)}đ`, cls: 'hot' }]);
+    }
+  if (!vouchers.length) return '';
+  const vt = (rows) => table({ head: [H({ html: 'Khóa học', cls: 'left' }, { html: 'Voucher giảm thêm', cls: 'hot' })], rows, cls: 't-tight' });
+  const half = Math.ceil(vouchers.length / 2);
+  return `<div class="sec">Quà tặng khóa học đặc biệt</div>${split ? `<div class="cols2">${vt(vouchers.slice(0, half))}${vt(vouchers.slice(half))}</div>` : vt(vouchers)}`;
+}
+
+function rulesBlock(data, ctx) {
+  const r = (data.settings.programRules ?? []).find((x) => eq(x.label, ctx.label) && eq(x.program, ctx.program));
+  const items = String(r?.rules ?? '').split('\n').map((x) => x.trim()).filter(Boolean);
+  if (!items.length) return '';
+  return `<div class="rules"><div class="rules-h">Quy định tham gia chương trình</div><ol>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ol></div>`;
+}
+
 function pagePromo(data, ctx) {
   const type = ctx.prog?.type;
-  let main = '';
-  let note = '';
   if (type === 'DINH_KY') {
     const tiers = data.periodic.filter((t) => eq(t.label, ctx.label)).sort((a, b) => a.from - b.from);
+    let main = '';
     if (tiers.length) {
       const max = Math.max(...tiers.map((t) => t.from));
       const cards = [];
@@ -220,48 +291,54 @@ function pagePromo(data, ctx) {
           <div class="big">${t ? pct(t.pct) : '—'}</div><div class="sm">${t?.cashback ? `Hoàn tiền ${num(t.cashback)}đ` : 'Giảm trực tiếp học phí'}</div></div>`);
       }
       main = `<div class="cards" style="grid-template-columns:repeat(${max},1fr)">${cards.join('')}</div>`;
-      if (tiers.some((t) => t.cashback)) note = `Hoàn tiền: ${esc(data.settings.docTexts?.cashbackLabel ?? '')}.`;
+      if (tiers.some((t) => t.cashback)) main += `<p class="note">Hoàn tiền: ${esc(data.settings.docTexts?.cashbackLabel ?? '')}.</p>`;
     }
-  } else if (type === 'LKT') {
+    const v = voucherBlock(data, ctx, true);
+    const rules = rulesBlock(data, ctx);
+    if (!main && !v) return null;
+    return { kick: 'Chương trình khuyến mại', h: 'Ưu đãi Định kỳ theo số khóa đăng ký', sub: 'Áp dụng cho toàn bộ hình thức thanh toán', html: main + v + rules };
+  }
+
+  // Định kỳ đặc biệt / mở rộng / liên kết trường: bảng ưu đãi theo tiến độ thanh toán (mẫu CTKM định kỳ đặc biệt)
+  let main = '';
+  let note = '';
+  if (type === 'LKT') {
     const group = findLktGroup(data, ctx.lktGroup);
     const base = findProgram(data, group?.baseProgram);
     const formats = lktFormatsFor(data, ctx.label, ctx.lktGroup);
     const rows = programRows(data, ctx.label, base);
     if (group && formats.length && rows.length) {
       main = table({
-        head: [H('Hình thức thanh toán', 'Kỳ hạn', `% ${esc(base.name)}`, ...formats.map((f) => ({ html: `${esc(f.format)}<br><small>cắt ${pct(f.cut)}</small>`, cls: 'hot' })))],
-        rows: rows.map((r) => [esc(r.method), Number(r.term) ? `${r.term} tháng` : 'Không kỳ hạn', pct(r.pct), ...formats.map((f) => ({ html: pct(r.pct - f.cut), cls: 'hot' }))]),
+        head: [H('Hình thức thanh toán', 'Tiến độ', `% ${esc(base.name)}`, ...formats.map((f) => ({ html: `${esc(f.format)}<br><small>cắt ${pct(f.cut)}</small>`, cls: 'hot' })))],
+        rows: rows.map((r) => [esc(findMethod(data, r.method)?.promoLabel || r.method), Number(r.term) ? `${r.term} tháng` : '—', pct(r.pct),
+          ...formats.map((f) => ({ html: pct(r.pct - f.cut), cls: 'hot' }))]),
         merge: [0],
+        cls: 't-tight',
       });
       note = `${esc(group.name)}: % giảm = % chương trình ${esc(base.name)} trừ mức cắt của format liên kết trường.`;
     }
   } else {
-    const rows = programRows(data, ctx.label, ctx.prog);
+    const blocked = data.settings.labels.find((l) => eq(l.name, ctx.label))?.blockedMethods ?? [];
+    const order = data.settings.paymentMethods.map((m) => m.name);
+    const rows = programRows(data, ctx.label, ctx.prog)
+      .filter((r) => !blocked.some((b) => eq(b, r.method)))
+      .sort((a, b) => order.indexOf(a.method) - order.indexOf(b.method) || a.term - b.term);
     if (rows.length)
       main = table({
-        head: [H('Hình thức thanh toán', 'Kỳ hạn', { html: 'Giảm giá', cls: 'hot' }, 'Áp dụng')],
-        rows: rows.map((r) => [esc(r.method), Number(r.term) ? `${r.term} tháng` : 'Không kỳ hạn', { html: pct(r.pct), cls: 'hot' }, esc(r.note)]),
-        merge: [0, 3],
+        head: [H('STT', 'Hình thức thanh toán', 'Tiến độ', { html: 'Mức ưu đãi', cls: 'hot' }, 'Khóa học áp dụng')],
+        rows: rows.map((r, i) => [String(i + 1), esc(findMethod(data, r.method)?.promoLabel || r.method), { html: Number(r.term) ? `${r.term} tháng` : '—', cls: 'nw' },
+          { html: pct(r.pct), cls: 'hot' }, esc(appliesText(r))]),
+        merge: [1, 3, 4],
+        cls: 't-promo',
       });
   }
-  // Voucher khóa học đặc biệt — chia 2 cột cho gọn
-  const vouchers = [];
-  for (const cc of coursesForLabel(data, ctx.label))
-    for (const mode of cc.modes) {
-      const v = ctx.q([{ code: cc.code, mode }]).lines[0]?.voucher ?? 0;
-      if (v > 0) vouchers.push([{ html: `${esc(cc.name)}${cc.modes.length > 1 ? ` <span class="muted">${esc(mode)}</span>` : ''}`, cls: 'left' }, { html: `${num(v)}đ`, cls: 'hot' }]);
-    }
-  const half = Math.ceil(vouchers.length / 2);
-  const vt = (rows) => table({ head: [H({ html: 'Khóa học', cls: 'left' }, { html: 'Voucher giảm thêm', cls: 'hot' })], rows });
-  const voucherHtml = vouchers.length
-    ? `<div class="sec">Quà tặng khóa học đặc biệt</div><div class="cols2">${vt(vouchers.slice(0, half))}${vt(vouchers.slice(half))}</div>`
-    : '';
-  if (!main && !voucherHtml) return null;
+  const v = voucherBlock(data, ctx, false);
+  if (!main && !v) return null;
   return {
     kick: 'Chương trình khuyến mại',
-    h: `Ưu đãi ${ctx.program}${type === 'DINH_KY' ? ' theo số khóa đăng ký' : ''}`,
-    sub: ctx.scope,
-    html: `${main}${note ? `<p class="note">${note}</p>` : ''}${voucherHtml}`,
+    h: `Ưu đãi ${ctx.program} theo tiến độ thanh toán`,
+    sub: 'Áp dụng cho toàn bộ khách hàng',
+    html: `<div class="cols2 top" style="grid-template-columns:1.35fr 1fr"><div><div class="sec">Mức ưu đãi</div>${main}${note ? `<p class="note">${note}</p>` : ''}</div><div>${v}</div></div>${rulesBlock(data, ctx)}`,
   };
 }
 
@@ -342,40 +419,75 @@ function pageServices(data, ctx) {
   };
 }
 
-function pageRoutes(data, ctx, output) {
+// Bảng giá lộ trình theo đầu ra.
+// Định kỳ: 1 bảng (giá như nhau mọi hình thức) + quà theo HTTT.
+// Chương trình khác: mỗi kịch bản thanh toán 1 nhóm cột (BH tiêu chuẩn + các gói BH), 2 kịch bản / trang.
+function pagesRoutes(data, ctx, output, scenarioIds) {
   const routes = data.routes.filter((r) => eq(r.label, ctx.label) && eq(r.output, output));
-  if (!routes.length) return null;
+  if (!routes.length) return [];
   const warranties = data.warranty.filter((w) => w.rate > 0);
-  const methods = giftMethods(data, ctx).filter((m) => !m.citime);
-  const showGifts = methods.some((m) => routes.some((r) => giftFor(data, ctx, m.name, r.items.length)));
-  const head = [H({ html: 'Lộ trình', cls: 'left' }, 'Giá gốc', { html: 'Giá sau ưu đãi', cls: 'hot' },
-    ...warranties.map((w) => `+ BH ${esc(w.name)}<br><small>${pct(w.rate)}</small>`),
-    ...(showGifts ? methods.map((m) => `Quà ${lines(m.docShort.replace(/^Đóng |^Trả /, (x) => x.toLowerCase()))}`) : []))];
-  const rows = [];
-  for (const n of [...new Set(routes.map((r) => r.items.length))].sort((a, b) => a - b)) {
-    rows.push({ group: comboName(n) });
-    for (const r of routes.filter((x) => x.items.length === n)) {
-      const q = ctx.q(r.items);
-      rows.push([
-        { html: esc(r.name), cls: 'left' }, num(q.gross),
-        q.ok ? { html: num(q.afterPromo), cls: 'hot' } : { html: 'Không áp dụng', cls: 'muted' },
-        ...warranties.map((w) => (q.ok ? num(ctx.q(r.items, { warranty: w.name }).final) : '—')),
-        ...(showGifts
-          ? methods.map((m) => {
-              const g = giftFor(data, ctx, m.name, n);
-              return g ? { html: esc(g.content), key: `${n}|${m.name}|${g.content}`, cls: 'gift' } : { html: '—', key: `${n}|${m.name}|-`, cls: 'muted' };
-            })
-          : []),
-      ]);
+  const base = data.warranty.find((w) => !(w.rate > 0));
+  const counts = [...new Set(routes.map((r) => r.items.length))].sort((a, b) => a - b);
+  const note = data.settings.docTexts?.routeNote ? `<p class="note">* ${esc(data.settings.docTexts.routeNote)}</p>` : '';
+  const page = (sub, html) => ({ kick: `Lộ trình gợi ý · Đầu ra ${output}`, h: `Bảng giá lộ trình đầu ra IELTS ${output}`, sub, html: html + note });
+
+  if (ctx.periodic) {
+    const methods = giftMethods(data, ctx).filter((m) => !m.citime);
+    const showGifts = methods.some((m) => routes.some((r) => giftFor(data, ctx, m.name, r.items.length)));
+    const head = [H({ html: 'Lộ trình', cls: 'left' }, 'Giá gốc', { html: 'Giá sau ưu đãi', cls: 'hot' },
+      ...warranties.map((w) => `+ BH ${esc(w.name)}<br><small>${pct(w.rate)}</small>`),
+      ...(showGifts ? methods.map((m) => `Quà ${lines(m.docShort.replace(/^Đóng |^Trả /, (x) => x.toLowerCase()))}`) : []))];
+    const rows = [];
+    for (const n of counts) {
+      rows.push({ group: comboName(n) });
+      for (const r of routes.filter((x) => x.items.length === n)) {
+        const q = ctx.q(r.items);
+        rows.push([
+          { html: esc(r.name), cls: 'left' }, num(q.gross),
+          q.ok ? { html: num(q.afterPromo), cls: 'hot' } : { html: 'Không áp dụng', cls: 'muted' },
+          ...warranties.map((w) => (q.ok ? num(ctx.q(r.items, { warranty: w.name }).final) : '—')),
+          ...(showGifts
+            ? methods.map((m) => {
+                const g = giftFor(data, ctx, m.name, n);
+                return g ? { html: esc(g.content), key: `${n}|${m.name}|${g.content}`, cls: 'gift' } : { html: '—', key: `${n}|${m.name}|-`, cls: 'muted' };
+              })
+            : []),
+        ]);
+      }
     }
+    return [page(`${ctx.program} · áp dụng cho toàn bộ hình thức thanh toán`,
+      table({ head, rows, merge: showGifts ? methods.map((_, i) => 3 + warranties.length + i) : [], cls: 't-routes' }))];
   }
-  return {
-    kick: `Lộ trình gợi ý · Đầu ra ${output}`,
-    h: `Bảng giá lộ trình đầu ra IELTS ${output}`,
-    sub: `${ctx.program} · ${ctx.scope.toLowerCase()}`,
-    html: table({ head, rows, merge: showGifts ? methods.map((_, i) => 3 + warranties.length + i) : [], cls: 't-routes' }) +
-      (data.settings.docTexts?.routeNote ? `<p class="note">* ${esc(data.settings.docTexts.routeNote)}</p>` : ''),
-  };
+
+  const all = scenariosFor(data, ctx);
+  const chosen = scenarioIds?.length ? all.filter((s) => scenarioIds.includes(s.id)) : all.filter((s) => defaultScenarios(data, ctx).includes(s.id));
+  const pages = [];
+  for (let i = 0; i < chosen.length; i += 2) {
+    const sc = chosen.slice(i, i + 2);
+    const head = [
+      [{ html: 'Lộ trình', rowspan: 2, cls: 'left' }, { html: 'Giá gốc', rowspan: 2 },
+        ...sc.map((x) => ({ html: `${esc(x.title)} · Giảm ${pct(x.pct)}`, colspan: 1 + warranties.length, cls: 'hot' }))],
+      sc.flatMap(() => [{ html: `BH ${esc(base?.name ?? 'tiêu chuẩn')}`, cls: 'hot' }, ...warranties.map((w) => ({ html: `+ BH ${esc(w.name)}<br><small>${pct(w.rate)}</small>` }))]),
+    ];
+    const rows = [];
+    for (const n of counts) {
+      rows.push({ group: comboName(n) });
+      for (const r of routes.filter((x) => x.items.length === n)) {
+        const cells = [{ html: esc(r.name), cls: 'left' }, num(ctx.q(r.items).gross)];
+        for (const x of sc) {
+          const q = ctx.q(r.items, { method: x.method, term: x.term });
+          if (!q.ok) cells.push(...Array(1 + warranties.length).fill(0).map(() => ({ html: 'x', cls: 'muted' })));
+          else
+            cells.push({ html: num(q.afterPromo), cls: 'hot' },
+              ...warranties.map((w) => num(ctx.q(r.items, { method: x.method, term: x.term, warranty: w.name }).final)));
+        }
+        rows.push(cells);
+      }
+    }
+    pages.push(page(`${ctx.program} · ${sc.map((x) => x.title).join(' và ')} · "x" = lộ trình không áp dụng hình thức này`,
+      table({ head, rows, cls: 't-routes' })));
+  }
+  return pages;
 }
 
 function pageCitime(data, ctx) {
@@ -426,7 +538,8 @@ export function buildPromoDoc(data, opts) {
   add('giftSets', pageGiftSets(data, ctx));
   add('services', pageServices(data, ctx));
   if (on.has('routes'))
-    for (const o of opts.outputs?.length ? opts.outputs : outputsFor(data, opts.label)) add('routes', pageRoutes(data, ctx, o));
+    for (const o of opts.outputs?.length ? opts.outputs : outputsFor(data, opts.label))
+      for (const p of pagesRoutes(data, ctx, o, opts.scenarios)) add('routes', p);
   add('citime', pageCitime(data, ctx));
   return { html: renderDocument({ data, brand, title, pages }), pages: pages.length, title };
 }
@@ -503,6 +616,12 @@ main > .sec:first-child, .cols2 > div > .sec:first-child { margin-top: 2px; }
 .t-routes td, .t-routes th { padding: 4px 7px; }
 .t-tight td { padding: 4px 8px; }
 .t-tall td { padding: 11px 9px; }
+.t-promo td { padding: 5px 8px; }
+.t td.nw, .t-promo th { white-space: nowrap; }
+.rules { margin-top: 14px; background: var(--ink); color: #fff; padding: 12px 16px 12px; border-left: 6px solid var(--main); }
+.rules-h { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--main); }
+.rules ol { margin: 6px 0 0; padding-left: 18px; font-size: 11.5px; line-height: 1.55; columns: 2; column-gap: 28px; }
+.rules li { break-inside: avoid; }
 
 /* Thẻ: be viền trên tối · màu nhãn · tối */
 .cards { display: grid; gap: 10px; }
@@ -529,6 +648,7 @@ main > .sec:first-child, .cols2 > div > .sec:first-child { margin-top: 2px; }
 .cv-title { font-size: 19px; font-weight: 700; margin-top: 16px; color: var(--main); text-transform: uppercase; line-height: 1.3; }
 .cv-date { font-size: 15px; margin-top: 8px; opacity: .8; }
 .cv-r { background: var(--main); color: var(--on-main); padding: 20mm 14mm 18mm; display: flex; flex-direction: column; }
+.cv-theme { font-size: 13px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 10px; opacity: .75; }
 .cv-prog { font-size: 34px; font-weight: 900; line-height: 1.05; letter-spacing: -.02em; }
 .cv-scope { font-size: 12.5px; font-weight: 600; margin-top: 8px; opacity: .8; }
 .cv-hl { margin-top: auto; display: grid; gap: 14px; }
@@ -545,9 +665,13 @@ footer b { color: var(--ink); }
 // Trang nhiều dòng hơn khổ giấy (VD admin thêm lộ trình) → tự co nội dung cho vừa 1 trang thay vì tràn sang trang mới
 function fitPages() {
   document.querySelectorAll('.page .inner').forEach(function (inner) {
-    inner.style.zoom = ''; inner.style.width = '';
+    inner.style.transform = ''; inner.style.width = ''; inner.style.height = '';
     var r = inner.clientHeight / inner.scrollHeight;
-    if (r < 1) { inner.style.zoom = r; inner.style.width = (100 / r) + '%'; inner.style.height = (100 / r) + '%'; }
+    if (r < 1) {
+      inner.style.transformOrigin = '0 0'; inner.style.transform = 'scale(' + r + ')';
+      inner.style.width = (100 / r) + '%'; inner.style.height = (100 / r) + '%';
+      inner.dataset.fit = r.toFixed(3);
+    }
   });
 }
 window.addEventListener('load', function () { (document.fonts ? document.fonts.ready : Promise.resolve()).then(fitPages); });

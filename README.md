@@ -80,15 +80,18 @@ Tab **Xuất PDF** (sale và admin đều dùng được): chọn nhãn, chươn
 
 - **Khổ A4 ngang, phong cách catalogue nhãn hàng:** nền kem, sọc màu nhãn bên trái, nhãn mục nhỏ in hoa, tiêu đề đậm, thẻ be/màu nhãn/tối, bảng có hàng tiêu đề tối và cột giá nhấn màu. Màu, logo và chân trang theo *Quản trị → Ấn phẩm PDF → Nhận diện nhãn*.
 - **Tiêu đề mặc định:** `CHƯƠNG TRÌNH KHUYẾN MÃI [NHÃN] - THÁNG [m/yyyy]`, lấy theo ngày bắt đầu ở *Thông tin chương trình*. Sửa được trước khi xuất.
+- **Chương trình Định kỳ đặc biệt / mở rộng / LKT** (theo mẫu ấn phẩm định kỳ đặc biệt): bảng *STT · Hình thức thanh toán · Tiến độ · Mức ưu đãi · Khóa học áp dụng*, voucher khóa học đặc biệt, khối *Quy định tham gia chương trình* (admin nhập ở *Quy định chương trình*). Bảng giá lộ trình chia theo **kịch bản thanh toán** (gom các kỳ hạn cùng %, VD "Trả góp Citime 8 & 9 tháng · Giảm 34%"), 2 kịch bản một trang, mỗi kịch bản có giá BH tiêu chuẩn + các gói BH; lộ trình không áp dụng hiện "x". Mặc định chọn Full + kỳ hạn dài nhất của từng hình thức trả góp, tick đổi được khi xuất.
 - **Các trang** (tick chọn): bìa + 3 con số nổi bật (tính tự động) · học phí từng khóa · ưu đãi theo chương trình + voucher · quà tặng theo HTTT · bộ quà tặng · gói bảo hành & dịch vụ học tập · bảng giá lộ trình (mỗi đầu ra một trang) · phụ lục Citime.
 - **Nội dung lấy hoàn toàn từ dữ liệu gốc admin nạp hằng tháng**, không có nội dung cố định. Ngoài giá/CTKM, admin nhập thêm: thời lượng và sĩ số (bảng Khóa học), Bộ quà tặng, Dịch vụ học tập, nhãn cột HTTT, câu chữ lưu ý.
 - Trang nào có nhiều dòng hơn khổ giấy sẽ tự thu nhỏ cho vừa một trang.
 
-## Cập nhật dữ liệu hằng tháng
+## Dữ liệu theo tháng (lưu trữ chương trình các tháng)
 
-- **Sửa trên web:** Admin → chọn bảng → sửa ô → *Lưu & áp dụng*. Có cảnh báo khi trùng khóa, giá ≤ 0, % ngoài 0–100.
-- **Nhập lại từ Excel:** giữ đúng tên sheet/cột như file gốc → *Nhập từ Excel* → kiểm tra → *Lưu & áp dụng*. Phần *Cấu hình* (chương trình, HTTT, nhãn, mã khóa) được giữ nguyên.
-- **Thêm chương trình mới** (VD "Back to school"): *Danh sách chương trình* → thêm dòng loại `MO_RONG` → nhập % ở *CTKM mở rộng* và voucher riêng ở *Voucher theo CTKM*. Không cần sửa code.
+- Mỗi tháng (`YYYY-MM`) là **một bản dữ liệu riêng**: giá, CTKM, quà, lộ trình, quy định… Tháng cũ giữ nguyên làm lưu trữ. Supabase lưu mỗi tháng một dòng `promo_config.key = '2026-11'`, mọi lần lưu được ghi vào `promo_config_history`.
+- **Sale** mặc định xem tháng hiện tại; chọn được các tháng cũ ở ô chọn tháng. Nếu admin **chưa tạo** chương trình tháng mới thì tháng đó hiện **trống** ("Chưa có chương trình khuyến mại tháng …").
+- **Admin → Chương trình theo tháng:** chọn tháng đang sửa, hoặc **Tạo tháng mới** (sao chép từ một tháng đã có hoặc từ dữ liệu Excel gốc). Ngày áp dụng tự đặt theo tháng, sửa được ở *Thông tin chương trình*. Tiếp đó cập nhật dữ liệu: sửa trực tiếp, *Nhập từ Excel* (cùng mẫu file) hoặc *Nhập JSON*, rồi **Lưu & áp dụng**. Chỉ tháng đang sửa bị thay đổi.
+- **Xuất PDF** có ô chọn **tháng + năm**; tháng chưa có chương trình thì báo trống.
+- Thêm chương trình mới (VD "Back to school"): *Danh sách chương trình* → thêm dòng loại `MO_RONG` → nhập % ở *CTKM mở rộng*, voucher riêng ở *Voucher theo CTKM*. Không cần sửa code.
 
 ## Logic tính (giữ nguyên Excel sheet 12_CALCULATOR_SALE)
 

@@ -1,8 +1,9 @@
--- Công cụ tính giá KM — lưu dữ liệu gốc dạng 1 tài liệu JSON + lịch sử phiên bản.
+-- Công cụ tính giá KM — lưu dữ liệu gốc THEO THÁNG: mỗi tháng 1 dòng key = 'YYYY-MM' (VD '2026-11'),
+-- data = tài liệu JSON của tháng đó. Tháng cũ giữ nguyên làm lưu trữ; lịch sử mọi lần lưu ở promo_config_history.
 -- Chạy trong Supabase SQL Editor của project portal.
 
 create table if not exists public.promo_config (
-  key         text primary key default 'current',
+  key         text primary key check (key ~ '^\d{4}-\d{2}$'),
   data        jsonb not null,
   updated_at  timestamptz not null default now(),
   updated_by  uuid default auth.uid()

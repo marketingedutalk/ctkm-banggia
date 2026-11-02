@@ -2,9 +2,9 @@
 export default {
  "version": 1,
  "settings": {
-  "campaignName": "Chương trình khuyến mại tháng 10/2026",
-  "validFrom": "2026-10-01",
-  "validTo": "2026-10-31",
+  "campaignName": "Mừng ngày Nhà giáo Việt Nam",
+  "validFrom": "2026-11-01",
+  "validTo": "2026-11-30",
   "labels": [
    {
     "name": "IELTS Mentor",
