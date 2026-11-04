@@ -31,7 +31,9 @@ const monthBounds = (m) => {
 };
 
 export async function mountPromoTool(root, opts = {}) {
-  const { store, allowRoleSwitch = false, user = null } = opts;
+  // preview: bản xem thử (VD trang chia sẻ để duyệt) — môi trường không có hộp thoại in / xác nhận / tải file
+  const { store, allowRoleSwitch = false, user = null, preview = false } = opts;
+  const ask = (msg) => (preview ? true : confirm(msg));
   // Dữ liệu lưu theo tháng: sale xem tháng hiện tại (trống nếu admin chưa tạo), admin sửa từng tháng, PDF chọn tháng + năm
   const docs = new Map();
   async function getDoc(m) {
@@ -495,8 +497,12 @@ export async function mountPromoTool(root, opts = {}) {
       head({
         ic: 'download',
         title: 'Xuất ấn phẩm chương trình khuyến mại',
-        sub: 'Dùng để in ấn, gửi nhà trường. Bấm “Xuất PDF” rồi chọn Lưu dưới dạng PDF (Save as PDF).',
-        actions: `<button class="pt-btn pt-btn--primary" data-act="pdf-print" ${pdfDoc?.pages ? '' : 'disabled'}>${icon('download', 16)}Xuất PDF</button>`,
+        sub: preview
+          ? 'Dùng để in ấn, gửi nhà trường. Bản xem thử cho xem trước toàn bộ ấn phẩm; trên portal bấm “Xuất PDF” để lưu file.'
+          : 'Dùng để in ấn, gửi nhà trường. Bấm “Xuất PDF” rồi chọn Lưu dưới dạng PDF (Save as PDF).',
+        actions: preview
+          ? `<span class="pt-pill pt-pill--purple" style="padding:8px 14px">${icon('eye', 14)}Bản xem thử: chỉ xem trước ấn phẩm, xuất PDF trên portal</span>`
+          : `<button class="pt-btn pt-btn--primary" data-act="pdf-print" ${pdfDoc?.pages ? '' : 'disabled'}>${icon('download', 16)}Xuất PDF</button>`,
       }) +
       `<div class="pt-grid" style="grid-template-columns:320px minmax(0,1fr);margin-top:14px;align-items:start" id="pt-pdf-grid">
         ${options}
@@ -580,7 +586,7 @@ export async function mountPromoTool(root, opts = {}) {
       toast(`${monthText(m)} đã có — chuyển sang sửa tháng này`);
       return;
     }
-    if (A.dirty && !confirm('Đang có thay đổi chưa lưu. Bỏ thay đổi để tạo tháng mới?')) return;
+    if (A.dirty && !ask('Đang có thay đổi chưa lưu. Bỏ thay đổi để tạo tháng mới?')) return;
     const src = A.copyFrom || S.months[0] || 'seed';
     const doc = normalizeData(src === 'seed' ? await store.seed() : clone(await getDoc(src)));
     [doc.settings.validFrom, doc.settings.validTo] = monthBounds(m);
@@ -655,7 +661,7 @@ export async function mountPromoTool(root, opts = {}) {
         actions: `
           <label class="pt-btn pt-btn--ghost pt-btn--sm" style="cursor:pointer">${icon('sheet', 15)}Nhập từ Excel<input type="file" accept=".xlsx" hidden data-act="import-xlsx"></label>
           <label class="pt-btn pt-btn--ghost pt-btn--sm" style="cursor:pointer">${icon('upload', 15)}Nhập JSON<input type="file" accept=".json" hidden data-act="import-json"></label>
-          <button class="pt-btn pt-btn--ghost pt-btn--sm" data-act="export-json">${icon('download', 15)}Xuất JSON</button>`,
+          ${preview ? '' : `<button class="pt-btn pt-btn--ghost pt-btn--sm" data-act="export-json">${icon('download', 15)}Xuất JSON</button>`}`,
         stats,
       }) +
       monthBar() +
@@ -751,7 +757,7 @@ export async function mountPromoTool(root, opts = {}) {
     const d = draft();
     const issues = validateData(d);
     S.admin.issues = issues;
-    if (issues.length && !confirm(`Có ${issues.length} cảnh báo dữ liệu (trùng khóa, giá ≤ 0...). Vẫn lưu?`)) {
+    if (issues.length && !ask(`Có ${issues.length} cảnh báo dữ liệu (trùng khóa, giá ≤ 0...). Vẫn lưu?`)) {
       const first = issues[0];
       S.admin.tab = first.table;
       render();
@@ -907,7 +913,7 @@ export async function mountPromoTool(root, opts = {}) {
         download(`du-lieu-khuyen-mai-${A.month}.json`, JSON.stringify(draft(), null, 1));
         return;
       case 'reset-seed':
-        if (!confirm(`Thay dữ liệu ${monthText(A.month).toLowerCase()} bằng bản gốc nhập từ file Excel ban đầu? (chưa lưu cho tới khi bấm Lưu)`)) return;
+        if (!ask(`Thay dữ liệu ${monthText(A.month).toLowerCase()} bằng bản gốc nhập từ file Excel ban đầu? (chưa lưu cho tới khi bấm Lưu)`)) return;
         A.draft = normalizeData(await store.seed());
         [A.draft.settings.validFrom, A.draft.settings.validTo] = monthBounds(A.month);
         markDirty();
@@ -974,7 +980,7 @@ export async function mountPromoTool(root, opts = {}) {
         resetViews();
         break;
       case 'admin-month':
-        if (S.admin.dirty && !confirm('Đang có thay đổi chưa lưu. Bỏ thay đổi để chuyển tháng?')) {
+        if (S.admin.dirty && !ask('Đang có thay đổi chưa lưu. Bỏ thay đổi để chuyển tháng?')) {
           el.value = S.admin.month;
           return;
         }
