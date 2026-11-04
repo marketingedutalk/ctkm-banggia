@@ -652,7 +652,7 @@ main > .sec:first-child, .cols2 > div > .sec:first-child { margin-top: 2px; }
 .cv-brand { font-size: 64px; font-weight: 900; letter-spacing: -.02em; line-height: 1; }
 .cv-title { font-size: 19px; font-weight: 700; margin-top: 16px; color: var(--main); text-transform: uppercase; line-height: 1.3; }
 .cv-date { font-size: 15px; margin-top: 8px; opacity: .8; }
-.cv-r { background: repeating-conic-gradient(var(--main) 0 25%, var(--main2) 0 50%) 0 0 / 18mm 18mm; color: var(--on-main); padding: 20mm 14mm 18mm; display: flex; flex-direction: column; }
+.cv-r { background: var(--main); color: var(--on-main); padding: 20mm 14mm 18mm; display: flex; flex-direction: column; }
 .cv-theme { font-size: 13px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 10px; opacity: .75; }
 .cv-prog { font-size: 34px; font-weight: 900; line-height: 1.05; letter-spacing: -.02em; }
 .cv-scope { font-size: 12.5px; font-weight: 600; margin-top: 8px; opacity: .8; }
