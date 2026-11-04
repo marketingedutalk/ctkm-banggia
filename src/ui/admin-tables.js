@@ -1,6 +1,8 @@
 // Khai báo các bảng dữ liệu gốc admin được sửa — mỗi bảng ứng với 1 sheet trong file Excel cũ.
 // Thêm cột / bảng mới chỉ cần sửa ở đây, UI tự sinh form.
 
+import { BRAND_ASSETS } from '../data/brand-assets.js';
+
 const uniq = (arr) => [...new Set(arr.filter((v) => v !== '' && v != null))];
 const MODES = ['Online', 'Offline'];
 
@@ -229,10 +231,11 @@ export function tableDefs(d) {
         { key: 'onMain', label: 'Chữ trên màu chủ đạo', type: 'color' },
         { key: 'font', label: 'Font (Google Font)', type: 'text' },
         { key: 'motif', label: 'Họa tiết', type: 'select', options: ['', 'wave'] },
-        { key: 'logoUrl', label: 'Link logo', type: 'text' },
+        { key: 'logoUrl', label: 'Logo trên nền tối (bìa)', type: 'combo', options: Object.keys(BRAND_ASSETS), wide: true },
+        { key: 'logoLight', label: 'Logo trên nền sáng (chân trang)', type: 'combo', options: Object.keys(BRAND_ASSETS), wide: true },
         { key: 'footer', label: 'Chân trang', type: 'multiline', wide: true },
       ],
-      blank: (label) => ({ label, brandName: String(label).toUpperCase(), bg: '#FFD602', bg2: '#FFFFFF', ink: '#000000', accent: '#01518E', neutral: '#E1DEE5', slate: '#44525E', logoUrl: '', footer: '' }),
+      blank: (label) => ({ label, brandName: String(label).toUpperCase(), bg: '#FFD602', bg2: '#FFFFFF', ink: '#000000', accent: '#01518E', neutral: '#E1DEE5', slate: '#44525E', logoUrl: '', logoLight: '', footer: '' }),
     },
     {
       id: 'programRules', group: 'Ấn phẩm PDF', icon: 'sheet', title: 'Quy định chương trình', path: ['settings', 'programRules'],

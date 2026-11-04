@@ -90,6 +90,11 @@ export function normalizeData(data) {
     }
     // Trường mới của nhận diện (gradient, font...) → lấy mặc định của nhãn nếu chưa có
     for (const k of ['gradient', 'onMain', 'font', 'motif', 'neutral', 'slate']) if (b[k] == null) b[k] = fresh?.[k] ?? '';
+    // Lần đầu có bộ logo (04/11/2026): nhãn chưa đặt logo → dùng logo có sẵn trong dự án
+    if (b.logoLight == null) {
+      b.logoLight = fresh?.logoLight ?? '';
+      if (!b.logoUrl) b.logoUrl = fresh?.logoUrl ?? '';
+    }
   }
   s.paymentMethods.forEach((m) => {
     const d = METHOD_DOC_LABELS[m.name] ?? { promoLabel: m.name, docLabel: m.name, docShort: m.name, giftCondition: '' };

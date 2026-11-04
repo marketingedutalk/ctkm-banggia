@@ -30,17 +30,17 @@ export const DOC_SETTINGS = {
     {
       label: 'IELTS Mentor', brandName: 'IELTS Mentor', bg: '#FFD602', bg2: '#FFFFFF', ink: '#000000', accent: '#01518E',
       neutral: '#E1DEE5', slate: '#44525E', gradient: '', onMain: '', font: 'Be Vietnam Pro', motif: '',
-      logoUrl: '', footer: 'Áp dụng cho toàn bộ khách hàng\nÁp dụng toàn bộ hệ thống IELTS MENTOR',
+      logoUrl: '', logoLight: '', footer: 'Áp dụng cho toàn bộ khách hàng\nÁp dụng toàn bộ hệ thống IELTS MENTOR',
     },
     {
       label: 'CLASSUP 1-8', brandName: 'ClassUp', bg: '#FF8B06', bg2: '#FFFFFF', ink: '#111960', accent: '#111960', neutral: '#EEEFF7', slate: '#5C6190',
       gradient: '#FFCE1C,#FB732F', onMain: '#FFFFFF', font: 'Nunito', motif: 'wave',
-      logoUrl: '', footer: 'Áp dụng cho toàn bộ khách hàng\nÁp dụng toàn bộ hệ thống ClassUp',
+      logoUrl: 'classup/ngang-am-ban', logoLight: 'classup/ngang-mau', footer: 'Áp dụng cho toàn bộ khách hàng\nÁp dụng toàn bộ hệ thống ClassUp',
     },
     {
       label: 'CLASSUP 1-1', brandName: 'ClassUp', bg: '#FF8B06', bg2: '#FFFFFF', ink: '#111960', accent: '#111960', neutral: '#EEEFF7', slate: '#5C6190',
       gradient: '#FFCE1C,#FB732F', onMain: '#FFFFFF', font: 'Nunito', motif: 'wave',
-      logoUrl: '', footer: 'Áp dụng cho toàn bộ khách hàng\nÁp dụng toàn bộ hệ thống ClassUp',
+      logoUrl: 'classup/ngang-am-ban', logoLight: 'classup/ngang-mau', footer: 'Áp dụng cho toàn bộ khách hàng\nÁp dụng toàn bộ hệ thống ClassUp',
     },
   ],
   // Dịch vụ học tập (bảng cuối trang 1)

@@ -1,6 +1,7 @@
 // Ấn phẩm "Chương trình khuyến mãi" để in / gửi nhà trường — khổ A4 ngang, phong cách catalogue nhãn hàng
 // (nền kem, sọc màu nhãn, thẻ be / màu nhãn / tối, bảng tiêu đề tối). Trình duyệt in ra PDF, chữ vector.
 // Mọi nội dung lấy từ dữ liệu gốc admin nạp hằng tháng; con số tính lại bằng engine.
+import { assetUrl } from '../data/brand-assets.js';
 import { quote, findProgram, findMethod, coursesForLabel, lktFormatsFor, findLktGroup } from '../engine/pricing.js';
 
 const eq = (a, b) => String(a ?? '').trim().toLowerCase() === String(b ?? '').trim().toLowerCase();
@@ -209,9 +210,9 @@ function pageCover(data, ctx, brand, title) {
   return {
     cls: 'cover',
     html: `<div class="cv-l">
-        <div class="kick">${brand.logoUrl ? `<img src="${esc(brand.logoUrl)}" alt="">` : `Chương trình khuyến mãi · Tháng ${monthOf(data)}`}</div>
+        <div class="kick">Chương trình khuyến mãi · Tháng ${monthOf(data)}</div>
         <div class="cv-main">
-          <div class="cv-brand">${esc(brand.brandName)}</div>
+          ${brand.logoUrl ? `<img class="cv-logo" src="${esc(assetUrl(brand.logoUrl))}" alt="${esc(brand.brandName)}">` : `<div class="cv-brand">${esc(brand.brandName)}</div>`}
           <div class="cv-title">${esc(title)}</div>
           <div class="cv-date">Áp dụng từ ${shortDate(s.validFrom)} đến ${shortDate(s.validTo)}</div>
         </div>
@@ -584,7 +585,7 @@ function renderDocument({ data, brand, title, pages }) {
             <div class="kick">${two(i)} · ${esc(p.kick)}</div>
             <h2>${esc(p.h)}</h2>${p.sub ? `<div class="sub">${esc(p.sub)}</div>` : ''}
             <main>${p.html}</main></div>
-            <footer><span>${footer}</span><span>${String(brand.footer || '').split('\n').map(esc).join(' · ')}</span><b>${i + 1}</b></footer></section>`,
+            <footer>${brand.logoLight ? `<img src="${esc(assetUrl(brand.logoLight))}" alt="">` : ''}<span>${footer}</span><span>${String(brand.footer || '').split('\n').map(esc).join(' · ')}</span><b>${i + 1}</b></footer></section>`,
     )
     .join('');
   return `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>${esc(title)}</title>
@@ -658,7 +659,7 @@ main > .sec:first-child, .cols2 > div > .sec:first-child { margin-top: 2px; }
 .cover { display: grid; grid-template-columns: 68% 32%; }
 .cv-l { background: var(--ink); color: var(--paper); padding: 20mm 18mm 18mm 20mm; display: flex; flex-direction: column; }
 .cv-l .kick { color: var(--main); font-size: 13px; letter-spacing: .2em; }
-.cv-l .kick img { height: 34px; }
+.cv-logo { height: 20mm; max-width: 150mm; object-fit: contain; object-position: left; display: block; }
 .cv-main { margin-top: auto; }
 .cv-brand { font-size: 64px; font-weight: 900; letter-spacing: -.02em; line-height: 1; }
 .cv-title { font-size: 19px; font-weight: 700; margin-top: 16px; color: var(--main); text-transform: uppercase; line-height: 1.3; }
@@ -679,7 +680,9 @@ main > .sec:first-child, .cols2 > div > .sec:first-child { margin-top: 2px; }
 .cv-hl span { font-size: 12px; font-weight: 600; }
 
 footer { position: absolute; left: 22mm; right: 16mm; bottom: 7mm; display: flex; gap: 18px; font-size: 10px; color: var(--muted); }
-footer span:nth-child(2) { flex: 1; text-align: right; }
+footer { align-items: center; }
+footer img { height: 4.2mm; margin: -1mm 0; }
+footer span:nth-last-of-type(1) { flex: 1; text-align: right; }
 footer b { color: var(--ink); }
 @media print { body { background: none; } .page { margin: 0; box-shadow: none; } }
 </style>

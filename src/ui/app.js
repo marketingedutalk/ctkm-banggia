@@ -723,6 +723,10 @@ export async function mountPromoTool(root, opts = {}) {
         const opts = col.options.includes(v) || v === '' ? col.options : [v, ...col.options];
         return `<select class="pt-select" ${attrs}>${opts.map((o) => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
       }
+      // Ô nhập có gợi ý (VD khóa logo có sẵn) nhưng vẫn gõ được link tùy ý
+      if (col.type === 'combo')
+        return `<input class="pt-input w-wide" list="pt-dl-${col.key}" value="${esc(v)}" ${attrs} placeholder="Chọn logo có sẵn hoặc dán link ảnh">
+          <datalist id="pt-dl-${col.key}">${col.options.map((o) => `<option value="${esc(o)}"></option>`).join('')}</datalist>`;
       if (col.type === 'color')
         return `<input type="color" value="${esc(v || '#000000')}" ${attrs} style="width:44px;height:30px;border:0;background:none;cursor:pointer">`;
       if (col.type === 'multiline')
