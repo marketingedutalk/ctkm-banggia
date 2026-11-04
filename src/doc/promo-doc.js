@@ -560,7 +560,10 @@ function renderDocument({ data, brand, title, pages }) {
   const paper = brand.bg2 && lum(brand.bg2) > 0.9 ? brand.bg2 : '#FFFCF2';
   const ink = brand.ink || '#161513';
   const onMain = lum(main) > 0.55 ? ink : '#FFFFFF';
-  const kick = lum(main) > 0.55 ? mix(main, '#000000', 0.5) : main;
+  // Màu phụ (xanh) đủ đậm thì dùng cho nhãn mục / tiêu đề phụ, không thì lấy màu chủ đạo pha tối
+  const kick = brand.accent && lum(brand.accent) < 0.35 ? brand.accent : lum(main) > 0.55 ? mix(main, '#000000', 0.5) : main;
+  const neutral = brand.neutral || mix(paper, '#8a7f5c', 0.1);
+  const slate = brand.slate || '#8a8577';
   const footer = `${esc(brand.brandName)} · Chương trình khuyến mãi ${monthOf(data)} · ${shortDate(s.validFrom)} – ${shortDate(s.validTo)}`;
   const body = pages
     .map((p, i) =>
@@ -579,7 +582,8 @@ function renderDocument({ data, brand, title, pages }) {
 <style>
 @page { size: A4 landscape; margin: 0; }
 :root { --main: ${main}; --paper: ${paper}; --ink: ${ink}; --on-main: ${onMain}; --kick: ${kick}; --accent: ${brand.accent || '#C8102E'};
-  --beige: ${mix(paper, '#8a7f5c', 0.1)}; --line: ${mix(paper, '#000000', 0.16)}; --tint: ${mix(main, '#FFFFFF', 0.72)}; --main2: ${mix(main, '#FFFFFF', 0.3)}; --muted: #8a8577; }
+  --card: ${neutral}; --beige: ${mix(neutral, '#FFFFFF', 0.55)}; --line: ${mix(neutral, '#000000', 0.12)}; --tint: ${mix(main, '#FFFFFF', 0.75)};
+  --main2: ${mix(main, '#FFFFFF', 0.3)}; --muted: ${slate}; }
 * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 html, body { margin: 0; }
 body { font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: var(--ink); background: #77746c; }
@@ -588,14 +592,14 @@ body { font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: var(--ink); 
 .page:last-child { break-after: auto; page-break-after: auto; }
 .page:not(.cover)::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5mm; background: var(--main); }
 .inner { padding: 13mm 16mm 16mm 22mm; height: 100%; display: flex; flex-direction: column; }
-h2::after { content: ''; display: block; width: 46px; height: 4px; background: var(--accent); margin-top: 6px; border-radius: 2px; }
+h2::after { content: ''; display: block; width: 46px; height: 4px; background: var(--kick); margin-top: 6px; border-radius: 2px; }
 .kick { font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--kick); }
 h2 { font-size: 30px; font-weight: 800; letter-spacing: -.015em; margin: 4px 0 2px; line-height: 1.15; }
 .sub { font-size: 12.5px; color: var(--muted); margin-bottom: 12px; }
 main { flex: 1; }
 .sec { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--kick); margin: 16px 0 7px; }
 main > .sec:first-child, .cols2 > div > .sec:first-child { margin-top: 2px; }
-.note { font-size: 11px; color: #5d594f; margin: 9px 0 0; line-height: 1.5; }
+.note { font-size: 11px; color: var(--muted); margin: 9px 0 0; line-height: 1.5; }
 .note.warn { color: var(--accent); }
 .muted { color: var(--muted); }
 .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -626,7 +630,7 @@ main > .sec:first-child, .cols2 > div > .sec:first-child { margin-top: 2px; }
 
 /* Thẻ: be viền trên tối · màu nhãn · tối */
 .cards { display: grid; gap: 10px; }
-.card { background: var(--beige); border-top: 4px solid var(--ink); padding: 12px 13px 13px; min-height: 120px; display: flex; flex-direction: column; }
+.card { background: var(--card); border-top: 4px solid var(--ink); padding: 12px 13px 13px; min-height: 120px; display: flex; flex-direction: column; }
 .card.y { background: var(--main); border-top-color: var(--main); color: var(--on-main); }
 .card.k { background: var(--ink); border-top-color: var(--ink); color: #fff; }
 .card .no { font-size: 11px; font-weight: 800; color: var(--kick); letter-spacing: .04em; }

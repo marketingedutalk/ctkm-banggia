@@ -84,7 +84,7 @@ export function normalizeData(data) {
   for (const b of s.brands) {
     const fresh = DOC_SETTINGS.brands.find((x) => x.label === b.label);
     const old = OLD_BRAND_COLORS.some((o) => String(o.bg).toLowerCase() === String(b.bg).toLowerCase() && String(o.bg2).toLowerCase() === String(b.bg2).toLowerCase());
-    if (fresh && old) Object.assign(b, { bg: fresh.bg, bg2: fresh.bg2, ink: fresh.ink, accent: fresh.accent });
+    if (fresh && old) Object.assign(b, { bg: fresh.bg, bg2: fresh.bg2, ink: fresh.ink, accent: fresh.accent, neutral: fresh.neutral, slate: fresh.slate });
   }
   s.paymentMethods.forEach((m) => {
     const d = METHOD_DOC_LABELS[m.name] ?? { promoLabel: m.name, docLabel: m.name, docShort: m.name, giftCondition: '' };

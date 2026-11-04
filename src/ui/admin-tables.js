@@ -215,18 +215,20 @@ export function tableDefs(d) {
     // ---- Ấn phẩm PDF ----
     {
       id: 'brands', group: 'Ấn phẩm PDF', icon: 'sparkle', title: 'Nhận diện nhãn', path: ['settings', 'brands'],
-      desc: 'Ấn phẩm PDF theo phong cách catalogue của nhãn: màu chủ đạo (sọc, thẻ, cột giá), màu nền giấy, màu tối (bìa, tiêu đề bảng), màu nhấn (gạch dưới tiêu đề, lưu ý), logo (link ảnh, để trống thì in tên nhãn) và dòng chân trang.',
+      desc: 'Ấn phẩm PDF theo phong cách catalogue của nhãn: màu chủ đạo (sọc, thẻ, cột giá), màu nền giấy, màu tối (bìa, tiêu đề bảng), màu phụ (nhãn mục, gạch dưới tiêu đề, lưu ý), xám nhạt (thẻ, dòng xen kẽ), xám đậm (chữ phụ), logo (link ảnh, để trống thì in tên nhãn) và dòng chân trang.',
       columns: [
         { key: 'label', label: 'Nhãn', type: 'select', options: labels },
         { key: 'brandName', label: 'Tên hiển thị', type: 'text' },
         { key: 'bg', label: 'Màu chủ đạo', type: 'color' },
         { key: 'bg2', label: 'Nền giấy', type: 'color' },
         { key: 'ink', label: 'Màu tối', type: 'color' },
-        { key: 'accent', label: 'Màu nhấn', type: 'color' },
+        { key: 'accent', label: 'Màu phụ (xanh)', type: 'color' },
+        { key: 'neutral', label: 'Xám nhạt', type: 'color' },
+        { key: 'slate', label: 'Xám đậm (chữ phụ)', type: 'color' },
         { key: 'logoUrl', label: 'Link logo', type: 'text' },
         { key: 'footer', label: 'Chân trang', type: 'multiline', wide: true },
       ],
-      blank: (label) => ({ label, brandName: String(label).toUpperCase(), bg: '#FBDE44', bg2: '#FFFBE8', ink: '#141414', accent: '#E07A00', logoUrl: '', footer: '' }),
+      blank: (label) => ({ label, brandName: String(label).toUpperCase(), bg: '#FFD602', bg2: '#FFFFFF', ink: '#000000', accent: '#01518E', neutral: '#E1DEE5', slate: '#44525E', logoUrl: '', footer: '' }),
     },
     {
       id: 'programRules', group: 'Ấn phẩm PDF', icon: 'sheet', title: 'Quy định chương trình', path: ['settings', 'programRules'],
