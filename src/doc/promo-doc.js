@@ -553,23 +553,34 @@ const lum = (h) => {
 };
 const mix = (a, b, t) => `#${rgb(a).map((v, i) => Math.round(v + (rgb(b)[i] - v) * t).toString(16).padStart(2, '0')).join('')}`;
 
+// Họa tiết đường nét cong (ClassUp): nét dày bo tròn, chạy tự do ở góc trang
+const WAVE = (cls) => `<svg class="${cls}" viewBox="0 0 400 220" preserveAspectRatio="none" aria-hidden="true">
+  <path d="M10 170 C 70 60, 130 60, 170 120 S 260 200, 300 110 S 370 20, 395 40" fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round"/></svg>`;
+
 function renderDocument({ data, brand, title, pages }) {
   const s = data.settings;
   const main = brand.bg || '#F0C030';
   // bg2 cũ là nền tia sáng vàng → nếu đậm thì dùng nền kem mặc định
   const paper = brand.bg2 && lum(brand.bg2) > 0.9 ? brand.bg2 : '#FFFCF2';
   const ink = brand.ink || '#161513';
-  const onMain = lum(main) > 0.55 ? ink : '#FFFFFF';
+  const onMain = brand.onMain || (lum(main) > 0.55 ? ink : '#FFFFFF');
+  // Mảng màu chủ đạo: màu trơn hoặc gradient của nhãn ("#FFCE1C,#FB732F")
+  const grad = String(brand.gradient || '').split(',').map((x) => x.trim()).filter(Boolean);
+  // Màu đậm (cuối dải) ở phía trên — nơi đặt chữ — để chữ trắng đủ tương phản
+  const mainFill = grad.length >= 2 ? `linear-gradient(165deg, ${[...grad].reverse().join(', ')})` : main;
+  const font = String(brand.font || 'Be Vietnam Pro').trim();
+  const fontUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(font).replace(/%20/g, '+')}:wght@400;500;600;700;800;900&display=swap`;
   // Màu phụ (xanh) đủ đậm thì dùng cho nhãn mục / tiêu đề phụ, không thì lấy màu chủ đạo pha tối
   const kick = brand.accent && lum(brand.accent) < 0.35 ? brand.accent : lum(main) > 0.55 ? mix(main, '#000000', 0.5) : main;
   const neutral = brand.neutral || mix(paper, '#8a7f5c', 0.1);
   const slate = brand.slate || '#8a8577';
+  const wave = brand.motif === 'wave';
   const footer = `${esc(brand.brandName)} · Chương trình khuyến mãi ${monthOf(data)} · ${shortDate(s.validFrom)} – ${shortDate(s.validTo)}`;
   const body = pages
     .map((p, i) =>
       p.cls === 'cover'
-        ? `<section class="page cover">${p.html}</section>`
-        : `<section class="page"><div class="inner">
+        ? `<section class="page cover">${p.html}${wave ? WAVE('wave wave-cover') : ''}</section>`
+        : `<section class="page">${wave ? WAVE('wave wave-page') : ''}<div class="inner">
             <div class="kick">${two(i)} · ${esc(p.kick)}</div>
             <h2>${esc(p.h)}</h2>${p.sub ? `<div class="sub">${esc(p.sub)}</div>` : ''}
             <main>${p.html}</main></div>
@@ -578,19 +589,19 @@ function renderDocument({ data, brand, title, pages }) {
     .join('');
   return `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>${esc(title)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="${esc(fontUrl)}" rel="stylesheet">
 <style>
 @page { size: A4 landscape; margin: 0; }
-:root { --main: ${main}; --paper: ${paper}; --ink: ${ink}; --on-main: ${onMain}; --kick: ${kick}; --accent: ${brand.accent || '#C8102E'};
+:root { --main-fill: ${mainFill}; --main: ${main}; --paper: ${paper}; --ink: ${ink}; --on-main: ${onMain}; --kick: ${kick}; --accent: ${brand.accent || '#C8102E'};
   --card: ${neutral}; --beige: ${mix(neutral, '#FFFFFF', 0.55)}; --line: ${mix(neutral, '#000000', 0.12)}; --tint: ${mix(main, '#FFFFFF', 0.75)};
   --main2: ${mix(main, '#FFFFFF', 0.3)}; --muted: ${slate}; }
 * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 html, body { margin: 0; }
-body { font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: var(--ink); background: #77746c; }
+body { font-family: '${esc(font)}', 'Be Vietnam Pro', system-ui, sans-serif; color: var(--ink); background: #77746c; }
 .page { width: 297mm; height: 210mm; margin: 0 auto 14px; position: relative; overflow: hidden; background: var(--paper);
   break-after: page; page-break-after: always; box-shadow: 0 6px 24px rgba(0,0,0,.25); }
 .page:last-child { break-after: auto; page-break-after: auto; }
-.page:not(.cover)::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5mm; background: var(--main); }
+.page:not(.cover)::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5mm; background: var(--main-fill); }
 .inner { padding: 13mm 16mm 16mm 22mm; height: 100%; display: flex; flex-direction: column; }
 h2::after { content: ''; display: block; width: 46px; height: 4px; background: var(--kick); margin-top: 6px; border-radius: 2px; }
 .kick { font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--kick); }
@@ -639,7 +650,7 @@ main > .sec:first-child, .cols2 > div > .sec:first-child { margin-top: 2px; }
 .card .nm { font-size: 15px; font-weight: 800; margin-top: 4px; }
 .card .big { font-size: 38px; font-weight: 900; letter-spacing: -.02em; margin-top: auto; line-height: 1.05; }
 .card .big.sm2 { font-size: 24px; margin-top: 6px; }
-.card .sm { font-size: 11.5px; margin-top: 4px; opacity: .85; }
+.card .sm { font-size: 11.5px; margin-top: 4px; opacity: .9; font-weight: 600; }
 .card ul { margin: 8px 0 0; padding-left: 16px; font-size: 11.5px; line-height: 1.55; }
 .sets .card { min-height: 0; }
 
@@ -652,12 +663,18 @@ main > .sec:first-child, .cols2 > div > .sec:first-child { margin-top: 2px; }
 .cv-brand { font-size: 64px; font-weight: 900; letter-spacing: -.02em; line-height: 1; }
 .cv-title { font-size: 19px; font-weight: 700; margin-top: 16px; color: var(--main); text-transform: uppercase; line-height: 1.3; }
 .cv-date { font-size: 15px; margin-top: 8px; opacity: .8; }
-.cv-r { background: var(--main); color: var(--on-main); padding: 20mm 14mm 18mm; display: flex; flex-direction: column; }
+.cv-r { background: var(--main-fill); color: var(--on-main); padding: 20mm 14mm 18mm; display: flex; flex-direction: column; }
 .cv-theme { font-size: 13px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 10px; opacity: .75; }
 .cv-prog { font-size: 34px; font-weight: 900; line-height: 1.05; letter-spacing: -.02em; }
 .cv-scope { font-size: 12.5px; font-weight: 600; margin-top: 8px; opacity: .8; }
 .cv-hl { margin-top: auto; display: grid; gap: 14px; }
-.cv-hl div { border-top: 3px solid var(--ink); padding: 8px 10px 9px; background: rgba(255,255,255,.55); }
+.cv-hl div { border-top: 3px solid ${lum(onMain) > 0.6 ? 'var(--main)' : 'var(--ink)'}; padding: 8px 10px 9px;
+  background: ${lum(onMain) > 0.6 ? 'var(--ink)' : 'rgba(255,255,255,.55)'}; }
+.wave { position: absolute; pointer-events: none; color: var(--main); }
+.wave-cover { width: 118mm; height: 58mm; left: 96mm; top: 62mm; opacity: .95; }
+.wave-page { width: 72mm; height: 36mm; right: -16mm; top: -12mm; opacity: .9; }
+.cover { position: relative; }
+.inner { position: relative; z-index: 1; }
 .cv-hl b { display: block; font-size: 30px; font-weight: 900; letter-spacing: -.02em; }
 .cv-hl span { font-size: 12px; font-weight: 600; }
 

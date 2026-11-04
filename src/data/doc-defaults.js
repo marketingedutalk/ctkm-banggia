@@ -24,19 +24,23 @@ export const COURSE_DOC_INFO = {
 export const DOC_SETTINGS = {
   // Nhận diện theo nhãn (phong cách catalogue): màu chủ đạo, nền giấy, màu tối, màu nhấn (cam), dòng chân trang.
 // IELTS Mentor theo bảng màu chính của nhãn: vàng #FFD602, xanh #01518E, xám đậm (C75 M60 Y50 K33), xám nhạt #E1DEE5, đen, trắng.
+// ClassUp theo Brand Guideline: Orange #FF8B06, Space Cadet #111960, gradient #FFCE1C → #FB732F, font Nunito, đường nét cong.
+// gradient = "màu đầu,màu cuối" cho mảng màu chủ đạo · onMain = màu chữ trên mảng chủ đạo · font = Google Font · motif = 'wave' (đường cong)
   brands: [
     {
       label: 'IELTS Mentor', brandName: 'IELTS Mentor', bg: '#FFD602', bg2: '#FFFFFF', ink: '#000000', accent: '#01518E',
-      neutral: '#E1DEE5', slate: '#44525E',
+      neutral: '#E1DEE5', slate: '#44525E', gradient: '', onMain: '', font: 'Be Vietnam Pro', motif: '',
       logoUrl: '', footer: 'Áp dụng cho toàn bộ khách hàng\nÁp dụng toàn bộ hệ thống IELTS MENTOR',
     },
     {
-      label: 'CLASSUP 1-8', brandName: 'CLASSUP', bg: '#4B2A9B', bg2: '#FBFAFF', ink: '#1F1646', accent: '#C8102E', neutral: '#ECE8F6', slate: '#5B5675',
-      logoUrl: '', footer: 'Áp dụng cho toàn bộ khách hàng\nÁp dụng toàn bộ hệ thống CLASSUP',
+      label: 'CLASSUP 1-8', brandName: 'ClassUp', bg: '#FF8B06', bg2: '#FFFFFF', ink: '#111960', accent: '#111960', neutral: '#EEEFF7', slate: '#5C6190',
+      gradient: '#FFCE1C,#FB732F', onMain: '#FFFFFF', font: 'Nunito', motif: 'wave',
+      logoUrl: '', footer: 'Áp dụng cho toàn bộ khách hàng\nÁp dụng toàn bộ hệ thống ClassUp',
     },
     {
-      label: 'CLASSUP 1-1', brandName: 'CLASSUP', bg: '#4B2A9B', bg2: '#FBFAFF', ink: '#1F1646', accent: '#C8102E', neutral: '#ECE8F6', slate: '#5B5675',
-      logoUrl: '', footer: 'Áp dụng cho toàn bộ khách hàng\nÁp dụng toàn bộ hệ thống CLASSUP',
+      label: 'CLASSUP 1-1', brandName: 'ClassUp', bg: '#FF8B06', bg2: '#FFFFFF', ink: '#111960', accent: '#111960', neutral: '#EEEFF7', slate: '#5C6190',
+      gradient: '#FFCE1C,#FB732F', onMain: '#FFFFFF', font: 'Nunito', motif: 'wave',
+      logoUrl: '', footer: 'Áp dụng cho toàn bộ khách hàng\nÁp dụng toàn bộ hệ thống ClassUp',
     },
   ],
   // Dịch vụ học tập (bảng cuối trang 1)
@@ -94,6 +98,8 @@ export const METHOD_DOC_LABELS = {
 
 // Bộ màu mặc định cũ của IELTS Mentor — dữ liệu đã lưu còn dùng thì tự đổi sang bộ màu mới
 export const OLD_BRAND_COLORS = [
+  { bg: '#4B2A9B', bg2: '#6A45C9' },
+  { bg: '#4B2A9B', bg2: '#FBFAFF' },
   { bg: '#FBDE44', bg2: '#FFFBE8' },
   { bg: '#FFD21F', bg2: '#FFE45C' },
   { bg: '#F0C030', bg2: '#FFFCF2' },
